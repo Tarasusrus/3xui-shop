@@ -39,14 +39,6 @@ class ThrottlingMiddleware(BaseMiddleware):
             logger.debug(f"Received event of type {type(event)}, skipping throttling.")
             return await handler(event, data)
 
-        if event.pre_checkout_query:
-            logger.debug("Pre-checkout query event, skipping throttling.")
-            return await handler(event, data)
-
-        if event.message and event.message.successful_payment:
-            logger.debug("Successful payment event, skipping throttling.")
-            return await handler(event, data)
-
         user: TelegramUser | None = event.event.from_user
 
         if user is not None:

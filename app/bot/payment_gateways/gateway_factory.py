@@ -10,7 +10,6 @@ from app.config import Config
 from ._gateway import PaymentGateway
 from .cryptomus import Cryptomus
 from .heleket import Heleket
-from .telegram_stars import TelegramStars
 from .yookassa import Yookassa
 from .yoomoney import Yoomoney
 
@@ -44,7 +43,6 @@ class GatewayFactory:
         dependencies = [app, config, session, storage, bot, i18n, services]
 
         gateways = [
-            (config.shop.PAYMENT_STARS_ENABLED, TelegramStars),
             (config.shop.PAYMENT_CRYPTOMUS_ENABLED, Cryptomus),
             (config.shop.PAYMENT_HELEKET_ENABLED, Heleket),
             (config.shop.PAYMENT_YOOKASSA_ENABLED, Yookassa),

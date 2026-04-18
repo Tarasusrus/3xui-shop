@@ -79,7 +79,6 @@ class TransactionStatus(Enum):
 class Currency(Enum):
     RUB = ("RUB", "₽")
     USD = ("USD", "$")
-    XTR = ("XTR", "★")
 
     @property
     def symbol(self) -> str:

@@ -35,7 +35,6 @@ DEFAULT_SHOP_REFERRER_LEVEL_TWO_PERIOD = 3
 DEFAULT_SHOP_REFERRER_LEVEL_ONE_RATE = 50
 DEFAULT_SHOP_REFERRER_LEVEL_TWO_RATE = 5
 DEFAULT_SHOP_BONUS_DEVICES_COUNT = 1
-DEFAULT_SHOP_PAYMENT_STARS_ENABLED = True
 DEFAULT_SHOP_PAYMENT_CRYPTOMUS_ENABLED = False
 DEFAULT_SHOP_PAYMENT_HELEKET_ENABLED = False
 DEFAULT_SHOP_PAYMENT_YOOKASSA_ENABLED = False
@@ -85,7 +84,6 @@ class ShopConfig:
     REFERRER_LEVEL_ONE_RATE: int
     REFERRER_LEVEL_TWO_RATE: int
     BONUS_DEVICES_COUNT: int
-    PAYMENT_STARS_ENABLED: bool
     PAYMENT_CRYPTOMUS_ENABLED: bool
     PAYMENT_HELEKET_ENABLED: bool
     PAYMENT_YOOKASSA_ENABLED: bool
@@ -184,11 +182,6 @@ def load_config() -> Config:
     if not xui_token:
         logger.warning("XUI_TOKEN is not set.")
 
-    payment_stars_enabled = env.bool(
-        "SHOP_PAYMENT_STARS_ENABLED",
-        default=DEFAULT_SHOP_PAYMENT_STARS_ENABLED,
-    )
-
     payment_cryptomus_enabled = env.bool(
         "SHOP_PAYMENT_CRYPTOMUS_ENABLED",
         default=DEFAULT_SHOP_PAYMENT_CRYPTOMUS_ENABLED,
@@ -242,14 +235,12 @@ def load_config() -> Config:
             payment_yoomoney_enabled = False
 
     if (
-        not payment_stars_enabled
-        and not payment_cryptomus_enabled
+        not payment_cryptomus_enabled
         and not payment_heleket_enabled
         and not payment_yookassa_enabled
         and not payment_yoomoney_enabled
     ):
-        logger.warning("No payment methods are enabled. Enabling Stars payment method.")
-        payment_stars_enabled = True
+        logger.warning("No payment methods are enabled.")
 
     referrer_reward_type = env.str(
         "SHOP_REFERRED_REWARD_TYPE",
@@ -331,7 +322,6 @@ def load_config() -> Config:
             BONUS_DEVICES_COUNT=env.int(
                 "SHOP_BONUS_DEVICES_COUNT", default=DEFAULT_SHOP_BONUS_DEVICES_COUNT
             ),
-            PAYMENT_STARS_ENABLED=payment_stars_enabled,
             PAYMENT_CRYPTOMUS_ENABLED=payment_cryptomus_enabled,
             PAYMENT_HELEKET_ENABLED=payment_heleket_enabled,
             PAYMENT_YOOKASSA_ENABLED=payment_yookassa_enabled,
