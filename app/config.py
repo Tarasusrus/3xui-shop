@@ -30,7 +30,7 @@ DEFAULT_SHOP_REFERRED_TRIAL_ENABLED = False
 DEFAULT_SHOP_REFERRED_TRIAL_PERIOD = 7
 DEFAULT_SHOP_REFERRER_REWARD_ENABLED = True
 DEFAULT_SHOP_REFERRER_REWARD_TYPE = ReferrerRewardType.DAYS.value
-DEFAULT_SHOP_REFERRER_LEVEL_ONE_PERIOD = 10
+DEFAULT_SHOP_REFERRER_LEVEL_ONE_PERIOD = 30
 DEFAULT_SHOP_REFERRER_LEVEL_TWO_PERIOD = 3
 DEFAULT_SHOP_REFERRER_LEVEL_ONE_RATE = 50
 DEFAULT_SHOP_REFERRER_LEVEL_TWO_RATE = 5
@@ -39,6 +39,11 @@ DEFAULT_SHOP_PAYMENT_CRYPTOMUS_ENABLED = False
 DEFAULT_SHOP_PAYMENT_HELEKET_ENABLED = False
 DEFAULT_SHOP_PAYMENT_YOOKASSA_ENABLED = False
 DEFAULT_SHOP_PAYMENT_YOOMONEY_ENABLED = False
+DEFAULT_SHOP_PAYMENT_SBP_ENABLED = False
+DEFAULT_SHOP_PAYMENT_TON_ENABLED = False
+DEFAULT_SHOP_PAYMENT_PERIOD_DAYS = 30
+DEFAULT_SHOP_PENDING_PAYMENT_TTL_DAYS = 3
+DEFAULT_SHOP_TON_PRICE_USDT = 1
 DEFAULT_DB_NAME = "bot_database"
 
 DEFAULT_REDIS_DB_NAME = "0"
@@ -88,6 +93,15 @@ class ShopConfig:
     PAYMENT_HELEKET_ENABLED: bool
     PAYMENT_YOOKASSA_ENABLED: bool
     PAYMENT_YOOMONEY_ENABLED: bool
+    PAYMENT_SBP_ENABLED: bool
+    PAYMENT_TON_ENABLED: bool
+    PAYMENT_PERIOD_DAYS: int
+    PENDING_PAYMENT_TTL_DAYS: int
+    SBP_PHONE: str | None
+    SBP_BANK: str | None
+    TON_ADDRESS: str | None
+    TON_ACCOUNT: str | None
+    TON_PRICE_USDT: float
 
 
 @dataclass
@@ -326,6 +340,29 @@ def load_config() -> Config:
             PAYMENT_HELEKET_ENABLED=payment_heleket_enabled,
             PAYMENT_YOOKASSA_ENABLED=payment_yookassa_enabled,
             PAYMENT_YOOMONEY_ENABLED=payment_yoomoney_enabled,
+            PAYMENT_SBP_ENABLED=env.bool(
+                "SHOP_PAYMENT_SBP_ENABLED", default=DEFAULT_SHOP_PAYMENT_SBP_ENABLED
+            ),
+            PAYMENT_TON_ENABLED=env.bool(
+                "SHOP_PAYMENT_TON_ENABLED", default=DEFAULT_SHOP_PAYMENT_TON_ENABLED
+            ),
+            PAYMENT_PERIOD_DAYS=env.int(
+                "SHOP_PAYMENT_PERIOD_DAYS",
+                default=DEFAULT_SHOP_PAYMENT_PERIOD_DAYS,
+                validate=Range(min=1, error="SHOP_PAYMENT_PERIOD_DAYS must be >= 1"),
+            ),
+            PENDING_PAYMENT_TTL_DAYS=env.int(
+                "SHOP_PENDING_PAYMENT_TTL_DAYS",
+                default=DEFAULT_SHOP_PENDING_PAYMENT_TTL_DAYS,
+                validate=Range(min=1, error="SHOP_PENDING_PAYMENT_TTL_DAYS must be >= 1"),
+            ),
+            SBP_PHONE=env.str("SHOP_SBP_PHONE", default=None),
+            SBP_BANK=env.str("SHOP_SBP_BANK", default=None),
+            TON_ADDRESS=env.str("SHOP_TON_ADDRESS", default=None),
+            TON_ACCOUNT=env.str("SHOP_TON_ACCOUNT", default=None),
+            TON_PRICE_USDT=env.float(
+                "SHOP_TON_PRICE_USDT", default=DEFAULT_SHOP_TON_PRICE_USDT
+            ),
         ),
         xui=XUIConfig(
             USERNAME=env.str("XUI_USERNAME"),

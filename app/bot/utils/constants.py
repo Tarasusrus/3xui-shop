@@ -74,6 +74,13 @@ class TransactionStatus(Enum):
     COMPLETED = "completed"
     CANCELED = "canceled"
     REFUNDED = "refunded"
+    EXPIRED = "expired"
+    REJECTED = "rejected"
+
+
+class PaymentType(Enum):
+    SBP_MANUAL = "sbp_manual"
+    TON_MANUAL = "ton_manual"
 
 
 class Currency(Enum):
