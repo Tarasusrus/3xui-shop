@@ -52,6 +52,14 @@ class NavSubscription(str, Enum):
     BACK_TO_PAYMENT = "back_to_payment"
 
 
+class NavOnboarding(str, Enum):
+    DEVICE_ANDROID = "onboarding_device_android"
+    DEVICE_IPHONE = "onboarding_device_iphone"
+    DEVICE_MAC = "onboarding_device_mac"
+    DEVICE_WINDOWS = "onboarding_device_windows"
+    SKIP = "onboarding_skip"
+
+
 class NavAdminTools(str, Enum):
     MAIN = "admin_tools"
     TEST = "test"

@@ -70,6 +70,8 @@ class User(Base):
         uselist=False,
     )
     source_invite_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    device: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     def __repr__(self) -> str:
         return (

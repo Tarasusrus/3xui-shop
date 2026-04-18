@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.filters import IsAdmin
 from app.bot.models import ServicesContainer
+from app.bot.routers.onboarding.handler import start_onboarding
 from app.bot.routers.subscription.keyboard import trial_success_keyboard
 from app.bot.utils.constants import MAIN_MESSAGE_ID_KEY
 from app.bot.utils.formatting import format_subscription_period
@@ -141,6 +142,7 @@ async def command_main_menu(
             message=message, user=user, services=services, config=config, state=state
         )
         if trial_sent:
+            await start_onboarding(message=message, state=state, config=config)
             return
 
     is_admin = await IsAdmin()(user_id=user.tg_id)
