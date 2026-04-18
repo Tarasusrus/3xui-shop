@@ -40,6 +40,8 @@ class Transaction(Base):
         Enum(TransactionStatus, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
     )
+    payment_type: Mapped[str | None] = mapped_column(String(length=32), nullable=True)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         default=func.now(),
@@ -68,6 +70,46 @@ class Transaction(Base):
         filter = [Transaction.tg_id == tg_id]
         query = await session.execute(
             select(Transaction).options(selectinload(Transaction.user)).where(*filter)
+        )
+        return query.scalars().all()
+
+    @classmethod
+    async def get_pending_manual(cls, session: AsyncSession, tg_id: int) -> Self | None:
+        query = await session.execute(
+            select(Transaction)
+            .options(selectinload(Transaction.user))
+            .where(
+                Transaction.tg_id == tg_id,
+                Transaction.status == TransactionStatus.PENDING,
+                Transaction.payment_type.in_(["sbp_manual", "ton_manual"]),
+            )
+            .order_by(Transaction.created_at.desc())
+        )
+        return query.scalars().first()
+
+    @classmethod
+    async def get_pending_for_admin(cls, session: AsyncSession) -> list[Self]:
+        query = await session.execute(
+            select(Transaction)
+            .options(selectinload(Transaction.user))
+            .where(
+                Transaction.status == TransactionStatus.PENDING,
+                Transaction.payment_type.in_(["sbp_manual", "ton_manual"]),
+            )
+            .order_by(Transaction.created_at.asc())
+        )
+        return query.scalars().all()
+
+    @classmethod
+    async def get_user_history(
+        cls, session: AsyncSession, tg_id: int, limit: int = 20
+    ) -> list[Self]:
+        query = await session.execute(
+            select(Transaction)
+            .options(selectinload(Transaction.user))
+            .where(Transaction.tg_id == tg_id)
+            .order_by(Transaction.created_at.desc())
+            .limit(limit)
         )
         return query.scalars().all()
 
