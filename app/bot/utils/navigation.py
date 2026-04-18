@@ -44,7 +44,6 @@ class NavSubscription(str, Enum):
 
     PAY = "pay"
     PAY_YOOKASSA = f"{PAY}_yookassa"
-    PAY_TELEGRAM_STARS = f"{PAY}_telegram_stars"
     PAY_CRYPTOMUS = f"{PAY}_cryptomus"
     PAY_HELEKET = f"{PAY}_heleket"
     PAY_YOOMONEY = f"{PAY}_yoomoney"

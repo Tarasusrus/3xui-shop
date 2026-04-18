@@ -37,7 +37,7 @@
 
 **3X-UI-SHOP** is a comprehensive solution designed to automate the sale of VPN subscriptions through Telegram.
 The bot uses the **3X-UI** panel API for client management and supports multiple payment methods, including
-**Cryptomus**, **Heleket**, **YooKassa**, **YooMoney**, and **Telegram Stars**.
+**Cryptomus**, **Heleket**, **YooKassa**, and **YooMoney**.
 
 The bot enables efficient subscription sales with advanced features:
 
@@ -151,7 +151,7 @@ Before starting the installation, make sure you have the installed [**Docker**](
 | BOT_PORT | ⭕ | 8080 | Port of the bot |
 | | | |
 | SHOP_EMAIL | ⭕ | support@3xui-shop.com | Email for receipts |
-| SHOP_CURRENCY | ⭕ | RUB | Currency for buttons (e.g., RUB, USD, XTR) |
+| SHOP_CURRENCY | ⭕ | RUB | Currency for buttons (e.g., RUB, USD) |
 | SHOP_TRIAL_ENABLED | ⭕ | True | Enable trial subscription for new users |
 | SHOP_TRIAL_PERIOD | ⭕ | 3 | Duration of the trial subscription in days |
 | SHOP_REFERRED_TRIAL_ENABLED | ⭕ | False | Enable extended trial period for referred users |
@@ -160,7 +160,6 @@ Before starting the installation, make sure you have the installed [**Docker**](
 | SHOP_REFERRER_LEVEL_ONE_PERIOD | ⭕ | 10 | Reward in days for the first-level referrer (inviter) |
 | SHOP_REFERRER_LEVEL_TWO_PERIOD | ⭕ | 3 | Reward in days for the second-level referrer (inviter of the inviter). |
 | SHOP_BONUS_DEVICES_COUNT | ⭕ | 1 | Default Device Limit for Promocode, Trial, and Referral Users (Based on Plan Settings) |
-| SHOP_PAYMENT_STARS_ENABLED | ⭕ | True | Enable Telegram stars payment |
 | SHOP_PAYMENT_CRYPTOMUS_ENABLED | ⭕ | False | Enable Cryptomus payment |
 | SHOP_PAYMENT_HELEKET_ENABLED | ⭕ | False | Enable Heleket payment |
 | SHOP_PAYMENT_YOOKASSA_ENABLED | ⭕ | False | Enable Yookassa payment |
@@ -211,12 +210,6 @@ Before starting the installation, make sure you have the installed [**Docker**](
                     "60": 1.2,  // Price for 60 days
                     "180": 3,   // Price for 180 days
                     "365": 6    // Price for 365 days
-                },
-                "XTR": {  // Prices for Telegram stars (XTR)
-                    "30": 60,   // Price for 30 days
-                    "60": 100,  // Price for 60 days
-                    "180": 250, // Price for 180 days
-                    "365": 500  // Price for 365 days
                 }
             }
         },
