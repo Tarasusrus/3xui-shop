@@ -19,7 +19,7 @@ from app.bot.routers.misc.keyboard import (
 )
 from app.bot.utils.constants import Currency
 from app.bot.utils.formatting import format_device_count, format_subscription_period
-from app.bot.utils.navigation import NavDownload, NavMain, NavSubscription
+from app.bot.utils.navigation import NavAdminTools, NavDownload, NavMain, NavSubscription
 
 
 def change_subscription_button() -> InlineKeyboardButton:
@@ -113,6 +113,42 @@ def duration_keyboard(
         )
 
     builder.row(back_to_main_menu_button())
+    return builder.as_markup()
+
+
+def manual_pay_keyboard(
+    payment_id: str, callback_data: SubscriptionData
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=_("subscription:button:i_paid"),
+            callback_data=f"{NavSubscription.I_PAID}:{payment_id}",
+        )
+    )
+    callback_data.state = NavSubscription.DURATION
+    builder.row(
+        back_button(
+            callback_data.pack(),
+            text=_("subscription:button:change_payment_method"),
+        )
+    )
+    builder.row(back_to_main_menu_button())
+    return builder.as_markup()
+
+
+def admin_confirm_payment_keyboard(payment_id: str) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(
+            text=_("admin:button:confirm_payment"),
+            callback_data=f"{NavAdminTools.CONFIRM_PAYMENT}:{payment_id}",
+        ),
+        InlineKeyboardButton(
+            text=_("admin:button:reject_payment"),
+            callback_data=f"{NavAdminTools.REJECT_PAYMENT}:{payment_id}",
+        ),
+    )
     return builder.as_markup()
 
 

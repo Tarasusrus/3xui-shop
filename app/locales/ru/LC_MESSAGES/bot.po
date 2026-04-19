@@ -1244,3 +1244,85 @@ msgstr[0] "1 месяц"
 msgstr[1] "{} месяца"
 msgstr[2] "{} месяцев"
 
+
+#: app/bot/payment_gateways/sbp_manual.py
+msgid "payment:gateway:sbp"
+msgstr "СБП"
+
+#: app/bot/payment_gateways/ton_manual.py
+msgid "payment:gateway:ton"
+msgstr "TON"
+
+#: app/bot/routers/subscription/keyboard.py
+msgid "subscription:button:i_paid"
+msgstr "✅ Я оплатил"
+
+#: app/bot/routers/subscription/keyboard.py
+msgid "admin:button:confirm_payment"
+msgstr "✅ Подтвердить"
+
+#: app/bot/routers/subscription/keyboard.py
+msgid "admin:button:reject_payment"
+msgstr "❌ Отклонить"
+
+#: app/bot/routers/subscription/payment_handler.py
+#, python-brace-format
+msgid "payment:message:manual_sbp"
+msgstr ""
+"💳 <b>Оплата через СБП</b>\n"
+"\n"
+"Переведите <b>{price} {currency}</b> по реквизитам:\n"
+"📱 Телефон: <code>{phone}</code>\n"
+"🏦 Банк: {bank}\n"
+"\n"
+"После оплаты нажмите кнопку «Я оплатил»."
+
+#: app/bot/routers/subscription/payment_handler.py
+#, python-brace-format
+msgid "payment:message:manual_ton"
+msgstr ""
+"💎 <b>Оплата через TON</b>\n"
+"\n"
+"Переведите <b>{amount} USDT</b> на адрес:\n"
+"<code>{address}</code>\n"
+"Комментарий: <code>{account}</code>\n"
+"\n"
+"После оплаты нажмите кнопку «Я оплатил»."
+
+#: app/bot/routers/subscription/payment_handler.py
+#, python-brace-format
+msgid "payment:message:pending_review"
+msgstr ""
+"⏳ <b>Ожидает подтверждения</b>\n"
+"\n"
+"ID пользователя: <code>{user_id}</code>\n"
+"ID платежа: <code>{payment_id}</code>"
+
+#: app/bot/routers/subscription/payment_handler.py
+msgid "payment:popup:awaiting_review"
+msgstr "⏳ Платёж отправлен на проверку администратору."
+
+#: app/bot/routers/admin_tools/payment_confirm_handler.py
+#, python-brace-format
+msgid "payment:message:rejected"
+msgstr ""
+"❌ <b>Платёж отклонён</b>\n"
+"\n"
+"ID платежа: <code>{payment_id}</code>\n"
+"Обратитесь в поддержку, если считаете это ошибкой."
+
+#: app/bot/routers/admin_tools/payment_confirm_handler.py
+msgid "admin:popup:payment_confirmed"
+msgstr "✅ Платёж подтверждён."
+
+#: app/bot/routers/admin_tools/payment_confirm_handler.py
+msgid "admin:popup:payment_rejected"
+msgstr "❌ Платёж отклонён."
+
+#: app/bot/routers/admin_tools/payment_confirm_handler.py
+msgid "admin:popup:payment_not_found"
+msgstr "⚠️ Платёж не найден."
+
+#: app/bot/routers/admin_tools/payment_confirm_handler.py
+msgid "admin:popup:payment_already_processed"
+msgstr "⚠️ Платёж уже обработан."
