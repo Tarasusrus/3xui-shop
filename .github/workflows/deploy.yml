@@ -54,8 +54,11 @@ jobs:
             SHOP_SBP_PHONE=${{ secrets.SHOP_SBP_PHONE }}
             SHOP_SBP_BANK=${{ secrets.SHOP_SBP_BANK }}
 
-            SHOP_PAYMENT_TON_ENABLED=False
-            SHOP_PAYMENT_STARS_ENABLED=False
+            SHOP_PAYMENT_TON_ENABLED=${{ secrets.SHOP_PAYMENT_TON_ENABLED }}
+            SHOP_TON_ADDRESS=${{ secrets.SHOP_TON_ADDRESS }}
+            SHOP_TON_ACCOUNT=${{ secrets.SHOP_TON_ACCOUNT }}
+            SHOP_TON_PRICE_USDT=${{ secrets.SHOP_TON_PRICE_USDT }}
+
             SHOP_PAYMENT_YOOKASSA_ENABLED=False
             SHOP_PAYMENT_CRYPTOMUS_ENABLED=False
             SHOP_PAYMENT_HELEKET_ENABLED=False
@@ -63,5 +66,5 @@ jobs:
             ENVEOF
 
             docker compose build
-            docker compose up -d
+            docker compose up -d --force-recreate
             docker compose logs --tail=50 bot
