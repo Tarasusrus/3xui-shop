@@ -91,11 +91,19 @@ class ReferralService:
             return False
 
     async def add_referrers_rewards_on_payment(
-        self, referred_tg_id: int, payment_amount: float, payment_id: str
+        self, referred_tg_id: int, payment_amount: float, payment_id: str, duration: int = 0
     ) -> bool:
         if not self.config.shop.REFERRER_REWARD_ENABLED:
             logger.warning(
                 f"Aborting. Tried to assign referrers payment reward for user {referred_tg_id}, when it is disabled."
+            )
+            return False
+
+        min_days = self.config.shop.REFERRER_MIN_SUBSCRIPTION_DAYS
+        if duration < min_days:
+            logger.warning(
+                f"Skipping referral reward for user {referred_tg_id}: "
+                f"subscription duration {duration} days < required {min_days} days."
             )
             return False
 

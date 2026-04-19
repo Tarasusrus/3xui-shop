@@ -88,6 +88,7 @@ class PaymentGateway(ABC):
                 referred_tg_id=data.user_id,
                 payment_amount=data.price,  # TODO: (!) add currency unified processing
                 payment_id=payment_id,
+                duration=data.duration,
             )
 
         await self.services.notification.notify_developer(
