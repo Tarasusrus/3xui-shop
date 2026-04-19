@@ -36,8 +36,6 @@ jobs:
             XUI_USERNAME=${{ secrets.XUI_USERNAME }}
             XUI_PASSWORD=${{ secrets.XUI_PASSWORD }}
 
-            LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
-
             SHOP_CURRENCY=RUB
             SHOP_TRIAL_ENABLED=True
             SHOP_TRIAL_PERIOD=3
