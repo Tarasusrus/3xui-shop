@@ -1395,3 +1395,34 @@ msgstr "⚠️ Payment not found."
 #: app/bot/routers/admin_tools/payment_confirm_handler.py
 msgid "admin:popup:payment_already_processed"
 msgstr "⚠️ Payment already processed."
+
+msgid "onboarding:button:skip"
+msgstr "Skip →"
+
+msgid "onboarding:message:choose_device"
+msgstr ""
+"📱 <b>Which device do you use?</b>\n"
+"\n"
+"Choose one — I'll send the right setup guide and give you <b>+{days} days</b> free."
+
+msgid "onboarding:message:enter_email"
+msgstr ""
+"📧 <b>Enter your email</b>\n"
+"\n"
+"Used as a backup contact. You'll get <b>+{days} days</b> added to your subscription.\n"
+"Type your email or skip."
+
+msgid "onboarding:message:invalid_email"
+msgstr ""
+"❌ Invalid email format.\n"
+"\n"
+"Please try again or press «Skip»."
+
+msgid "onboarding:message:bonus_granted"
+msgstr "✅ <b>+{days} days added to your subscription!</b> Thank you."
+
+msgid "onboarding:message:bonus_failed"
+msgstr "⚠️ Failed to credit bonus. Please contact support."
+
+msgid "onboarding:message:skipped"
+msgstr "👌 Skipped. You can fill this in later via your profile."

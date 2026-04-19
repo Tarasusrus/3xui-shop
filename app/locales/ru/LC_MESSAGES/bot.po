@@ -1411,3 +1411,34 @@ msgstr "⚠️ Платёж не найден."
 #: app/bot/routers/admin_tools/payment_confirm_handler.py
 msgid "admin:popup:payment_already_processed"
 msgstr "⚠️ Платёж уже обработан."
+
+msgid "onboarding:button:skip"
+msgstr "Пропустить →"
+
+msgid "onboarding:message:choose_device"
+msgstr ""
+"📱 <b>Какое устройство используешь?</b>\n"
+"\n"
+"Выбери — пришлю правильную инструкцию и дам <b>+{days} дней</b> к подписке."
+
+msgid "onboarding:message:enter_email"
+msgstr ""
+"📧 <b>Укажи email</b>\n"
+"\n"
+"Нужен как резервный канал связи. За это — <b>+{days} дней</b> к подписке.\n"
+"Введи email или пропусти."
+
+msgid "onboarding:message:invalid_email"
+msgstr ""
+"❌ Неверный формат email.\n"
+"\n"
+"Попробуй ещё раз или нажми «Пропустить»."
+
+msgid "onboarding:message:bonus_granted"
+msgstr "✅ <b>+{days} дней добавлены к подписке!</b> Спасибо."
+
+msgid "onboarding:message:bonus_failed"
+msgstr "⚠️ Не удалось начислить бонус. Напиши в поддержку."
+
+msgid "onboarding:message:skipped"
+msgstr "👌 Пропущено. Всегда можно заполнить позже через профиль."
