@@ -659,6 +659,9 @@ msgstr "Under development!"
 
 #: app/bot/routers/download/handler.py:68
 #: app/bot/routers/download/handler.py:75
+msgid "download:message:coming_soon"
+msgstr "📖 Instructions coming soon. Stay tuned!"
+
 msgid "download:message:choose_platform"
 msgstr "📲 <b>Choose your platform:</b>"
 
@@ -744,6 +747,9 @@ msgstr "👥 Referral"
 #: app/bot/routers/main_menu/keyboard.py:58
 msgid "main_menu:button:instructions"
 msgstr "📖 Instructions"
+
+msgid "main_menu:button:pay"
+msgstr "💳 Pay"
 
 msgid "main_menu:button:support"
 msgstr "🆘 Support"

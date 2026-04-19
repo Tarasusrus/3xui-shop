@@ -666,6 +666,9 @@ msgstr "В разработке!"
 
 #: app/bot/routers/download/handler.py:68
 #: app/bot/routers/download/handler.py:75
+msgid "download:message:coming_soon"
+msgstr "📖 Инструкции скоро появятся. Следите за обновлениями!"
+
 msgid "download:message:choose_platform"
 msgstr "📲 <b>Выберите вашу платформу:</b>"
 
@@ -753,6 +756,9 @@ msgstr "👥 Пригласить"
 #: app/bot/routers/main_menu/keyboard.py:58
 msgid "main_menu:button:instructions"
 msgstr "📖 Инструкции"
+
+msgid "main_menu:button:pay"
+msgstr "💳 Оплатить"
 
 msgid "main_menu:button:support"
 msgstr "🆘 Помощь"

@@ -1,0 +1,257 @@
+name: "Меню v2 — Клиентский флоу + Админ-панель + 3x-ui"
+version: 2
+base_branch: main
+working_branch: feature/menu-v2
+
+phases:
+
+  - id: phase-0
+    name: "Подготовка — смёрж неслитых веток"
+    description: |
+      feature/auto-trial-on-start и feature/onboarding-collect-fields созданы ранее но не смёржены в main.
+      Без них авто-триал и FSM онбординга отсутствуют.
+    tasks:
+      - id: T-0.1
+        name: "Смёрж feature/auto-trial-on-start в main"
+        type: git
+        steps:
+          - git checkout main && git pull origin main
+          - git merge feature/auto-trial-on-start --no-ff -m "feat: merge auto-trial on /start"
+        validation:
+          - grep -r "_try_auto_gift_trial\|auto_gift_trial" app/ --include="*.py"
+        status: done
+
+      - id: T-0.2
+        name: "Смёрж feature/onboarding-collect-fields в main"
+        type: git
+        depends_on: [T-0.1]
+        steps:
+          - git merge feature/onboarding-collect-fields --no-ff -m "feat: merge onboarding FSM"
+        validation:
+          - ls app/bot/routers/onboarding/*.py | grep -v __pycache__
+        status: done
+
+      - id: T-0.3
+        name: "Создать рабочую ветку для v2"
+        type: git
+        depends_on: [T-0.2]
+        steps:
+          - git checkout -b feature/menu-v2
+        validation:
+          - git branch | grep "feature/menu-v2"
+        status: done
+
+  - id: phase-1
+    name: "Переработка главного меню"
+    description: |
+      Новая структура: 6 фиксированных кнопок.
+      Убрать условные кнопки триала.
+      Добавить кнопку «Оплатить» как top-level.
+    tasks:
+      - id: T-1.1
+        name: "Переработать main_menu_keyboard()"
+        type: code
+        depends_on: [T-0.3]
+        file: app/bot/routers/main_menu/keyboard.py
+        changes: |
+          Заменить текущую логику:
+          - Убрать условные блоки is_trial_available, is_referred_trial_available
+          - Убрать параметры is_trial_available, is_referred_trial_available из функции
+          - Новый порядок кнопок (1 кнопка на строку или 2 в ряд по смыслу):
+            Row 1: «📋 Заполнить профиль (+4д)» → NavProfile.MAIN (или NavOnboarding.MAIN если есть)
+            Row 2: «📡 Моя подписка» → NavSubscription.MAIN
+            Row 3: «💳 Оплатить» → NavSubscription.PAY
+            Row 4: «👥 Пригласить друга» → NavReferral.MAIN
+            Row 5: «💬 Написать нам» → NavSupport.WRITE_US (напрямую, минуя support меню)
+            Row 6: «📖 Инструкции» → NavDownload.MAIN
+          - Admin Tools кнопка — остаётся, показывается только is_admin=True
+          - Убрать параметры is_referral_available (реф. кнопка показывается всегда)
+        validation:
+          - Визуально: в боте после /start видны ровно 6 кнопок (+ Admin Tools для админа)
+        status: done
+
+      - id: T-1.2
+        name: "Обновить вызовы main_menu_keyboard() в handler.py"
+        type: code
+        depends_on: [T-1.1]
+        file: app/bot/routers/main_menu/handler.py
+        changes: |
+          - Убрать is_trial_available, is_referred_trial_available из всех 3 вызовов main_menu_keyboard()
+          - Убрать is_referral_available (конфиг) из вызовов если он больше не нужен
+          - Проверить что redirect_to_main_menu() тоже обновлён
+        validation:
+          - python -c "import ast; ast.parse(open('app/bot/routers/main_menu/handler.py').read())"
+        status: done
+
+      - id: T-1.3
+        name: "Убедиться что NavSupport.WRITE_US доступен напрямую из main menu"
+        type: verify
+        depends_on: [T-1.1]
+        description: |
+          Кнопка «Написать нам» в главном меню ведёт на NavSupport.WRITE_US напрямую.
+          callback_write_us в support/handler.py уже реализован и запускает FSM.
+          Дополнительного кода не требуется — только правильный callback в keyboard.
+        validation:
+          - grep "WRITE_US" app/bot/routers/main_menu/keyboard.py
+        status: done
+
+  - id: phase-2
+    name: "Заглушка «Инструкции»"
+    tasks:
+      - id: T-2.1
+        name: "Проверить и обновить NavDownload.MAIN handler"
+        type: code
+        depends_on: [T-0.3]
+        file: app/bot/routers/download/handler.py
+        changes: |
+          Прочитать текущий handler для NavDownload.MAIN.
+          Если он пытается показать реальные инструкции с QR/ссылками → добавить ответ-заглушку:
+          «📖 Инструкции скоро появятся. Следите за обновлениями!»
+          + кнопка «← Назад» → NavMain.MAIN_MENU
+          Если handler уже возвращает текст → только обновить i18n ключ.
+        validation:
+          - Нажать «Инструкции» в боте → заглушка показана без ошибки
+        status: done
+
+  - id: phase-3
+    name: "Скрыть ненужные методы оплаты"
+    description: "Только env-изменения на сервере. Код не меняется."
+    tasks:
+      - id: T-3.1
+        name: "Обновить .env на сервере vpn-relay"
+        type: ops
+        depends_on: []
+        steps:
+          - SSH на vpn-relay (172.86.95.214)
+          - Открыть ~/3xui-shop/.env
+          - Установить: SHOP_PAYMENT_SBP_ENABLED=True
+          - Установить: SHOP_PAYMENT_TON_ENABLED=True
+          - Установить: SHOP_PAYMENT_STARS_ENABLED=False
+          - Установить: SHOP_PAYMENT_YOOKASSA_ENABLED=False
+          - Установить: SHOP_PAYMENT_CRYPTOMUS_ENABLED=False (если есть)
+          - Установить: SHOP_PAYMENT_YOOMONEY_ENABLED=False (если есть)
+          - Установить: SHOP_PAYMENT_HELEKET_ENABLED=False (если есть)
+        validation:
+          - grep "PAYMENT.*ENABLED" ~/3xui-shop/.env
+        status: todo
+
+  - id: phase-4
+    name: "Multi-admin"
+    description: "Только env-изменение. IsAdmin уже поддерживает список."
+    tasks:
+      - id: T-4.1
+        name: "Добавить 403809728 в BOT_ADMINS на сервере"
+        type: ops
+        depends_on: []
+        steps:
+          - SSH на vpn-relay
+          - В ~/3xui-shop/.env изменить: BOT_ADMINS=420229961,403809728
+        validation:
+          - grep "BOT_ADMINS" ~/3xui-shop/.env | grep "403809728"
+        status: todo
+
+  - id: phase-5
+    name: "Диагностика и подключение 3x-ui"
+    description: |
+      «Нет активных серверов» блокирует и триал, и подписку.
+      Нужно найти причину и добавить сервер через /admin_server.
+    tasks:
+      - id: T-5.1
+        name: "Диагностика: проверить таблицу Server"
+        type: ops
+        depends_on: []
+        steps:
+          - SSH на vpn-relay
+          - cd ~/3xui-shop
+          - docker compose exec bot python -c "import asyncio; from app.db.database import get_session; ..."
+          - ИЛИ: sqlite3 app/data/db.sqlite3 "SELECT * FROM server;"
+        validation:
+          - Если пусто → переходить к T-5.2
+          - Если запись есть → проверить XUI_HOST/XUI_PASSWORD в .env
+        status: todo
+
+      - id: T-5.2
+        name: "Добавить 3x-ui сервер через /admin_tools → Server Management"
+        type: ops
+        depends_on: [T-5.1]
+        description: |
+          В Telegram боте (@Test123PicoBot) как admin:
+          → Admin Tools → Server Management → Add Server
+          Параметры: host=172.86.95.214, port=37521, username=vpnFran, password=из .env
+          Проверить: Admin Tools → Test → убедиться что сервер пингуется
+        validation:
+          - Admin Tools → Test → ответ без ошибки «нет серверов»
+          - /start новым пользователем → триал выдан
+        status: todo
+
+      - id: T-5.3
+        name: "Убедиться что XUI_PASSWORD в .env правильный"
+        type: verify
+        depends_on: [T-5.1]
+        description: |
+          Проверить ~/3xui-shop/.env:
+          XUI_USERNAME=vpnFran
+          XUI_PASSWORD=<актуальный пароль от 3x-ui панели>
+          XUI_HOST=http://172.86.95.214:37521
+          Если неправильные → исправить и перезапустить: docker compose restart bot
+        validation:
+          - docker compose logs bot --tail=20 | grep -i "server\|xui\|error"
+        status: todo
+
+  - id: phase-6
+    name: "Деплой и smoke-тест"
+    tasks:
+      - id: T-6.1
+        name: "Push и деплой на vpn-relay"
+        type: ops
+        depends_on: [T-1.2, T-2.1]
+        steps:
+          - git push origin feature/menu-v2
+          - PR → main → merge
+          - GitHub Actions deploy автоматически или: ssh vpn-relay && cd ~/3xui-shop && git pull && docker compose restart bot
+        validation:
+          - docker compose logs bot --tail=30 | grep -v ERROR
+        status: todo
+
+      - id: T-6.2
+        name: "Smoke-тест клиентского флоу"
+        type: manual_test
+        depends_on: [T-6.1, T-5.2]
+        checklist:
+          - "[ ] /start → триал выдан автоматически (без клика)"
+          - "[ ] Главное меню → ровно 6 кнопок"
+          - "[ ] «Заполнить профиль» → FSM запустился"
+          - "[ ] «Моя подписка» → статус + история"
+          - "[ ] «Оплатить» → только СБП + TON (Stars отсутствуют)"
+          - "[ ] СБП → реквизиты → «Я оплатил» → подписка +30д"
+          - "[ ] «Пригласить друга» → реф. ссылка"
+          - "[ ] «Написать нам» → FSM → сообщение пришло на SUPPORT_ID"
+          - "[ ] «Инструкции» → заглушка"
+        status: todo
+
+      - id: T-6.3
+        name: "Smoke-тест админки"
+        type: manual_test
+        depends_on: [T-6.1, T-4.1]
+        checklist:
+          - "[ ] @Test123PicoBot как 420229961 → Admin Tools видны"
+          - "[ ] @Test123PicoBot как 403809728 → Admin Tools видны"
+          - "[ ] /admin_payments → список PENDING или «Нет оплат»"
+          - "[ ] Admin → ✅ Подтвердить → COMPLETED + уведомление юзеру"
+          - "[ ] Admin → ❌ Отклонить → REJECTED + вычет дней + уведомление"
+          - "[ ] Server Management → Add Server → успех"
+          - "[ ] Test кнопка → без ошибки «нет серверов»"
+        status: todo
+
+open_questions:
+  - id: OQ-1
+    question: "Есть ли поле-guard для onboarding bonus в User модели?"
+    action: "grep -r 'onboarding_bonus\\|bonus_granted' app/db/models/user.py; если нет — проверить FSM в onboarding router"
+
+  - id: OQ-2
+    question: "NavDownload.MAIN handler — что сейчас возвращает?"
+    action: "Читать app/bot/routers/download/handler.py перед T-2.1"
+
+  - id: OQ-3
+    question: "XUI_PASSWORD в .env на сервере — актуальный?"
+    action: "ssh vpn-relay && grep XUI_ ~/3xui-shop/.env"

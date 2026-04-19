@@ -148,12 +148,7 @@ async def command_main_menu(
     is_admin = await IsAdmin()(user_id=user.tg_id)
     main_menu = await message.answer(
         text=_("main_menu:message:main").format(name=user.first_name),
-        reply_markup=main_menu_keyboard(
-            is_admin,
-            is_referral_available=config.shop.REFERRER_REWARD_ENABLED,
-            is_trial_available=await services.subscription.is_trial_available(user),
-            is_referred_trial_available=await services.referral.is_referred_trial_available(user),
-        ),
+        reply_markup=main_menu_keyboard(is_admin),
     )
     await state.update_data({MAIN_MESSAGE_ID_KEY: main_menu.message_id})
 
@@ -172,12 +167,7 @@ async def callback_main_menu(
     is_admin = await IsAdmin()(user_id=user.tg_id)
     await callback.message.edit_text(
         text=_("main_menu:message:main").format(name=user.first_name),
-        reply_markup=main_menu_keyboard(
-            is_admin,
-            is_referral_available=config.shop.REFERRER_REWARD_ENABLED,
-            is_trial_available=await services.subscription.is_trial_available(user),
-            is_referred_trial_available=await services.referral.is_referred_trial_available(user),
-        ),
+        reply_markup=main_menu_keyboard(is_admin),
     )
 
 
@@ -205,14 +195,7 @@ async def redirect_to_main_menu(
             text=_("main_menu:message:main").format(name=user.first_name),
             chat_id=user.tg_id,
             message_id=main_message_id,
-            reply_markup=main_menu_keyboard(
-                is_admin,
-                is_referral_available=config.shop.REFERRER_REWARD_ENABLED,
-                is_trial_available=await services.subscription.is_trial_available(user),
-                is_referred_trial_available=await services.referral.is_referred_trial_available(
-                    user
-                ),
-            ),
+            reply_markup=main_menu_keyboard(is_admin),
         )
     except Exception as exception:
         logger.error(f"Error redirecting to main menu page: {exception}")
