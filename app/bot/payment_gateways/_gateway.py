@@ -10,7 +10,6 @@ from aiohttp.web import Application
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bot.models import ServicesContainer, SubscriptionData
-from app.bot.routers.main_menu.handler import redirect_to_main_menu
 from app.bot.utils.constants import (
     DEFAULT_LANGUAGE,
     EVENT_PAYMENT_CANCELED_TAG,
@@ -101,6 +100,8 @@ class PaymentGateway(ABC):
                 duration=format_subscription_period(data.duration),
             ),
         )
+
+        from app.bot.routers.main_menu.handler import redirect_to_main_menu
 
         locale = user.language_code if user else DEFAULT_LANGUAGE
         with self.i18n.use_locale(locale):
