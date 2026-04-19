@@ -14,6 +14,7 @@ from app.bot.utils.constants import (
     MAIN_MESSAGE_ID_KEY,
     PREVIOUS_CALLBACK_KEY,
 )
+from app.bot.routers.misc.keyboard import back_to_main_menu_keyboard
 from app.bot.utils.navigation import NavDownload, NavMain
 from app.bot.utils.network import parse_redirect_url
 from app.config import Config
@@ -51,29 +52,21 @@ async def redirect_to_connection(request: Request) -> Response:
 
 @router.callback_query(F.data == NavDownload.MAIN)
 async def callback_download(callback: CallbackQuery, user: User, state: FSMContext) -> None:
-    logger.info(f"User {user.tg_id} opened download apps page.")
+    logger.info(f"User {user.tg_id} opened instructions page.")
 
     main_message_id = await state.get_value(MAIN_MESSAGE_ID_KEY)
-    previous_callback = await state.get_value(PREVIOUS_CALLBACK_KEY)
 
-    logger.debug("--------------------------------")
-    logger.debug(f"callback.message.message_id: {callback.message.message_id}")
-    logger.debug(f"main_message_id: {main_message_id}")
-    logger.debug(f"previous_callback: {previous_callback}")
-    logger.debug("--------------------------------")
     if callback.message.message_id != main_message_id:
-        await state.update_data({PREVIOUS_CALLBACK_KEY: NavMain.MAIN_MENU})
-        previous_callback = NavMain.MAIN_MENU
         await callback.bot.edit_message_text(
-            text=_("download:message:choose_platform"),
+            text=_("download:message:coming_soon"),
             chat_id=user.tg_id,
             message_id=main_message_id,
-            reply_markup=platforms_keyboard(previous_callback),
+            reply_markup=back_to_main_menu_keyboard(),
         )
     else:
         await callback.message.edit_text(
-            text=_("download:message:choose_platform"),
-            reply_markup=platforms_keyboard(previous_callback),
+            text=_("download:message:coming_soon"),
+            reply_markup=back_to_main_menu_keyboard(),
         )
 
 

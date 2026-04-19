@@ -11,7 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.filters import IsAdmin
 from app.bot.models import ServicesContainer
+from app.bot.routers.onboarding.handler import start_onboarding
+from app.bot.routers.subscription.keyboard import trial_success_keyboard
 from app.bot.utils.constants import MAIN_MESSAGE_ID_KEY
+from app.bot.utils.formatting import format_subscription_period
 from app.bot.utils.navigation import NavMain
 from app.config import Config
 from app.db.models import Invite, Referral, User
@@ -67,6 +70,42 @@ async def process_creating_referral(session: AsyncSession, user: User, referrer_
         return False
 
 
+async def _try_auto_gift_trial(
+    message: Message,
+    user: User,
+    services: ServicesContainer,
+    config: Config,
+    state: FSMContext,
+) -> bool:
+    server = await services.server_pool.get_available_server()
+    if not server:
+        logger.warning(f"Auto-trial skipped for user {user.tg_id}: no available server.")
+        return False
+
+    duration = 0
+    if await services.referral.is_referred_trial_available(user=user):
+        duration = config.shop.REFERRED_TRIAL_PERIOD
+        success = await services.referral.reward_referred_user(user=user, days_count=duration)
+    elif await services.subscription.is_trial_available(user=user):
+        duration = config.shop.TRIAL_PERIOD
+        success = await services.subscription.gift_trial(user=user)
+    else:
+        return False
+
+    if not success:
+        return False
+
+    sent = await message.answer(
+        text=_("subscription:ntf:trial_activate_success").format(
+            duration=format_subscription_period(duration),
+        ),
+        reply_markup=trial_success_keyboard(),
+    )
+    await state.update_data({MAIN_MESSAGE_ID_KEY: sent.message_id})
+    logger.info(f"Auto-gifted trial ({duration} days) to new user {user.tg_id}.")
+    return True
+
+
 @router.message(Command(NavMain.START))
 async def command_main_menu(
     message: Message,
@@ -98,15 +137,18 @@ async def command_main_menu(
         else:
             await process_invite_attribution(session=session, user=user, invite_hash=command.args)
 
+    if is_new_user:
+        trial_sent = await _try_auto_gift_trial(
+            message=message, user=user, services=services, config=config, state=state
+        )
+        if trial_sent:
+            await start_onboarding(message=message, state=state, config=config)
+            return
+
     is_admin = await IsAdmin()(user_id=user.tg_id)
     main_menu = await message.answer(
         text=_("main_menu:message:main").format(name=user.first_name),
-        reply_markup=main_menu_keyboard(
-            is_admin,
-            is_referral_available=config.shop.REFERRER_REWARD_ENABLED,
-            is_trial_available=await services.subscription.is_trial_available(user),
-            is_referred_trial_available=await services.referral.is_referred_trial_available(user),
-        ),
+        reply_markup=main_menu_keyboard(is_admin),
     )
     await state.update_data({MAIN_MESSAGE_ID_KEY: main_menu.message_id})
 
@@ -125,12 +167,7 @@ async def callback_main_menu(
     is_admin = await IsAdmin()(user_id=user.tg_id)
     await callback.message.edit_text(
         text=_("main_menu:message:main").format(name=user.first_name),
-        reply_markup=main_menu_keyboard(
-            is_admin,
-            is_referral_available=config.shop.REFERRER_REWARD_ENABLED,
-            is_trial_available=await services.subscription.is_trial_available(user),
-            is_referred_trial_available=await services.referral.is_referred_trial_available(user),
-        ),
+        reply_markup=main_menu_keyboard(is_admin),
     )
 
 
@@ -158,14 +195,7 @@ async def redirect_to_main_menu(
             text=_("main_menu:message:main").format(name=user.first_name),
             chat_id=user.tg_id,
             message_id=main_message_id,
-            reply_markup=main_menu_keyboard(
-                is_admin,
-                is_referral_available=config.shop.REFERRER_REWARD_ENABLED,
-                is_trial_available=await services.subscription.is_trial_available(user),
-                is_referred_trial_available=await services.referral.is_referred_trial_available(
-                    user
-                ),
-            ),
+            reply_markup=main_menu_keyboard(is_admin),
         )
     except Exception as exception:
         logger.error(f"Error redirecting to main menu page: {exception}")
