@@ -2,6 +2,7 @@ import logging
 import re
 
 from aiogram import F, Router
+from aiogram.filters import StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery, Message
@@ -107,7 +108,7 @@ async def message_email_input(
 
 
 @router.callback_query(
-    OnboardingStates.waiting_device | OnboardingStates.waiting_email,
+    StateFilter(OnboardingStates.waiting_device, OnboardingStates.waiting_email),
     F.data == NavOnboarding.SKIP,
 )
 async def callback_skip(
