@@ -916,6 +916,9 @@ msgstr ""
 "❌ <i>Failed to your trial period, please try again later or contact "
 "administrator.</i>"
 
+msgid "referral:ntf:bonus_received"
+msgstr "+{days} days for friend payment"
+
 #: app/bot/routers/referral/keyboard.py:14
 #: app/bot/routers/subscription/keyboard.py:185
 msgid "subscription:button:connect"

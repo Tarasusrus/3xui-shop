@@ -927,6 +927,9 @@ msgstr ""
 "❌ <i>Не удалось активировать пробный период, пожалуйста попробуйте позже,"
 " либо обратитесь к администратору</i>"
 
+msgid "referral:ntf:bonus_received"
+msgstr "+{days} дней за оплату друга"
+
 #: app/bot/routers/referral/keyboard.py:14
 #: app/bot/routers/subscription/keyboard.py:185
 msgid "subscription:button:connect"

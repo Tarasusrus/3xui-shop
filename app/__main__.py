@@ -57,7 +57,7 @@ async def on_startup(
     await services.notification.notify_developer(BOT_STARTED_TAG)
     logging.info("Bot started.")
 
-    tasks.transactions.start_scheduler(db.session)
+    tasks.transactions.start_scheduler(session=db.session, bot=bot, i18n=i18n)
     if config.shop.REFERRER_REWARD_ENABLED:
         tasks.referral.start_scheduler(
             session_factory=db.session, referral_service=services.referral
