@@ -46,25 +46,36 @@ async def on_startup(
     redis: Redis,
     i18n: I18n,
 ) -> None:
-    webhook_url = urljoin(config.bot.DOMAIN, TELEGRAM_WEBHOOK)
-
-    if await bot.get_webhook_info() != webhook_url:
-        await bot.set_webhook(webhook_url)
-
-    current_webhook = await bot.get_webhook_info()
-    logging.info(f"Current webhook URL: {current_webhook.url}")
+    if config.bot.POLLING:
+        await bot.delete_webhook(drop_pending_updates=True)
+        logging.info("Bot started in polling mode.")
+    else:
+        webhook_url = urljoin(config.bot.DOMAIN, TELEGRAM_WEBHOOK)
+        if await bot.get_webhook_info() != webhook_url:
+            await bot.set_webhook(webhook_url)
+        current_webhook = await bot.get_webhook_info()
+        logging.info(f"Current webhook URL: {current_webhook.url}")
 
     await services.notification.notify_developer(BOT_STARTED_TAG)
     logging.info("Bot started.")
 
-    tasks.transactions.start_scheduler(db.session)
+    tasks.transactions.start_scheduler(session=db.session, bot=bot, i18n=i18n)
     if config.shop.REFERRER_REWARD_ENABLED:
         tasks.referral.start_scheduler(
-            session_factory=db.session, referral_service=services.referral
+            session_factory=db.session,
+            referral_service=services.referral,
+            bot=bot,
+            i18n=i18n,
         )
     tasks.subscription_expiry.start_scheduler(
         session_factory=db.session,
         redis=redis,
+        i18n=i18n,
+        vpn_service=services.vpn,
+        notification_service=services.notification,
+    )
+    tasks.subscription_reminders.start_scheduler(
+        session_factory=db.session,
         i18n=i18n,
         vpn_service=services.vpn,
         notification_service=services.notification,
@@ -162,13 +173,14 @@ async def main() -> None:
     # Set up bot commands
     await commands.setup(bot)
 
-    # Set up webhook request handler
-    webhook_requests_handler = SimpleRequestHandler(dispatcher=dispatcher, bot=bot)
-    webhook_requests_handler.register(app, path=TELEGRAM_WEBHOOK)
-
-    # Set up application and run
-    setup_application(app, dispatcher, bot=bot)
-    await _run_app(app, host=DEFAULT_BOT_HOST, port=config.bot.PORT)
+    if config.bot.POLLING:
+        await dispatcher.start_polling(bot, allowed_updates=dispatcher.resolve_used_update_types())
+    else:
+        # Set up webhook request handler
+        webhook_requests_handler = SimpleRequestHandler(dispatcher=dispatcher, bot=bot)
+        webhook_requests_handler.register(app, path=TELEGRAM_WEBHOOK)
+        setup_application(app, dispatcher, bot=bot)
+        await _run_app(app, host=DEFAULT_BOT_HOST, port=config.bot.PORT)
 
 
 if __name__ == "__main__":

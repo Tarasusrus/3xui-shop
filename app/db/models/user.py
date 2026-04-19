@@ -70,6 +70,8 @@ class User(Base):
         uselist=False,
     )
     source_invite_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    reminded_7d_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
+    reminded_3d_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
 
     def __repr__(self) -> str:
         return (

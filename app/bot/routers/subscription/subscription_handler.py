@@ -10,7 +10,7 @@ from app.bot.models import ClientData, ServicesContainer, SubscriptionData
 from app.bot.payment_gateways import GatewayFactory
 from app.bot.utils.navigation import NavSubscription
 from app.config import Config
-from app.db.models import User
+from app.db.models import Transaction, User
 
 from .keyboard import (
     devices_keyboard,
@@ -27,9 +27,9 @@ async def show_subscription(
     callback: CallbackQuery,
     client_data: ClientData | None,
     callback_data: SubscriptionData,
+    history: list[Transaction] | None = None,
 ) -> None:
     if client_data:
-
         if client_data.has_subscription_expired:
             text = _("subscription:message:expired")
         else:
@@ -39,6 +39,13 @@ async def show_subscription(
             )
     else:
         text = _("subscription:message:not_active")
+
+    if history:
+        history_lines = "\n".join(
+            f"• {t.subscription} — {t.status.value} ({t.created_at.strftime('%d.%m.%Y')})"
+            for t in history
+        )
+        text += "\n\n" + _("subscription:message:history").format(history=history_lines)
 
     await callback.message.edit_text(
         text=text,
@@ -54,6 +61,7 @@ async def callback_subscription(
     callback: CallbackQuery,
     user: User,
     state: FSMContext,
+    session: AsyncSession,
     services: ServicesContainer,
 ) -> None:
     logger.info(f"User {user.tg_id} opened subscription page.")
@@ -69,8 +77,14 @@ async def callback_subscription(
             )
             return
 
+    history = await Transaction.get_user_history(session=session, tg_id=user.tg_id, limit=5)
     callback_data = SubscriptionData(state=NavSubscription.PROCESS, user_id=user.tg_id)
-    await show_subscription(callback=callback, client_data=client_data, callback_data=callback_data)
+    await show_subscription(
+        callback=callback,
+        client_data=client_data,
+        callback_data=callback_data,
+        history=history,
+    )
 
 
 @router.callback_query(SubscriptionData.filter(F.state == NavSubscription.EXTEND))

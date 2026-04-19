@@ -34,6 +34,7 @@ DEFAULT_SHOP_REFERRER_LEVEL_ONE_PERIOD = 30
 DEFAULT_SHOP_REFERRER_LEVEL_TWO_PERIOD = 3
 DEFAULT_SHOP_REFERRER_LEVEL_ONE_RATE = 50
 DEFAULT_SHOP_REFERRER_LEVEL_TWO_RATE = 5
+DEFAULT_SHOP_REFERRER_MIN_SUBSCRIPTION_DAYS = 30
 DEFAULT_SHOP_BONUS_DEVICES_COUNT = 1
 DEFAULT_SHOP_PAYMENT_CRYPTOMUS_ENABLED = False
 DEFAULT_SHOP_PAYMENT_HELEKET_ENABLED = False
@@ -70,8 +71,9 @@ class BotConfig:
     ADMINS: list[int]
     DEV_ID: int
     SUPPORT_ID: int
-    DOMAIN: str
+    DOMAIN: str | None
     PORT: int
+    POLLING: bool
 
 
 @dataclass
@@ -88,6 +90,7 @@ class ShopConfig:
     REFERRER_LEVEL_TWO_PERIOD: int
     REFERRER_LEVEL_ONE_RATE: int
     REFERRER_LEVEL_TWO_RATE: int
+    REFERRER_MIN_SUBSCRIPTION_DAYS: int
     BONUS_DEVICES_COUNT: int
     PAYMENT_CRYPTOMUS_ENABLED: bool
     PAYMENT_HELEKET_ENABLED: bool
@@ -279,8 +282,9 @@ def load_config() -> Config:
             ADMINS=bot_admins,
             DEV_ID=env.int("BOT_DEV_ID"),
             SUPPORT_ID=env.int("BOT_SUPPORT_ID"),
-            DOMAIN=f"https://{env.str('BOT_DOMAIN')}",
+            DOMAIN=f"https://{env.str('BOT_DOMAIN')}" if env.str("BOT_DOMAIN", default=None) else None,
             PORT=env.int("BOT_PORT", default=DEFAULT_BOT_PORT),
+            POLLING=env.bool("BOT_POLLING", default=False),
         ),
         shop=ShopConfig(
             EMAIL=env.str("SHOP_EMAIL", default=DEFAULT_SHOP_EMAIL),
@@ -332,6 +336,11 @@ def load_config() -> Config:
                     max=100,
                     error="SHOP_REFERRER_LEVEL_TWO_RATE must be between 1 and 100",
                 ),
+            ),
+            REFERRER_MIN_SUBSCRIPTION_DAYS=env.int(
+                "SHOP_REFERRER_MIN_SUBSCRIPTION_DAYS",
+                default=DEFAULT_SHOP_REFERRER_MIN_SUBSCRIPTION_DAYS,
+                validate=Range(min=1, error="SHOP_REFERRER_MIN_SUBSCRIPTION_DAYS must be >= 1"),
             ),
             BONUS_DEVICES_COUNT=env.int(
                 "SHOP_BONUS_DEVICES_COUNT", default=DEFAULT_SHOP_BONUS_DEVICES_COUNT

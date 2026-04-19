@@ -22,6 +22,7 @@ class NavSupport(str, Enum):
     MAIN = "support"
     HOW_TO_CONNECT = "how_to_connect"
     VPN_NOT_WORKING = "vpn_not_working"
+    WRITE_US = "support_write_us"
 
 
 class NavDownload(str, Enum):
@@ -47,6 +48,9 @@ class NavSubscription(str, Enum):
     PAY_CRYPTOMUS = f"{PAY}_cryptomus"
     PAY_HELEKET = f"{PAY}_heleket"
     PAY_YOOMONEY = f"{PAY}_yoomoney"
+    PAY_SBP = f"{PAY}_sbp"
+    PAY_TON = f"{PAY}_ton"
+    I_PAID = "i_paid"
     BACK_TO_DURATION = "back_to_duration"
     BACK_TO_PAYMENT = "back_to_payment"
 
@@ -87,6 +91,9 @@ class NavAdminTools(str, Enum):
     LAST_NOTIFICATION = "last_notification"
     EDIT_NOTIFICATION = "edit_notification"
     DELETE_NOTIFICATION = "delete_notification"
+
+    CONFIRM_PAYMENT = "confirm_payment"
+    REJECT_PAYMENT = "reject_payment"
 
     CREATE_BACKUP = "create_backup"
 

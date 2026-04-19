@@ -4,6 +4,7 @@ from . import (
     invites_handler,
     maintenance_handler,
     notification_handler,
+    payment_confirm_handler,
     promocode_handler,
     restart_handler,
     server_handler,

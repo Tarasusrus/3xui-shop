@@ -91,11 +91,19 @@ class ReferralService:
             return False
 
     async def add_referrers_rewards_on_payment(
-        self, referred_tg_id: int, payment_amount: float, payment_id: str
+        self, referred_tg_id: int, payment_amount: float, payment_id: str, duration: int = 0
     ) -> bool:
         if not self.config.shop.REFERRER_REWARD_ENABLED:
             logger.warning(
                 f"Aborting. Tried to assign referrers payment reward for user {referred_tg_id}, when it is disabled."
+            )
+            return False
+
+        min_days = self.config.shop.REFERRER_MIN_SUBSCRIPTION_DAYS
+        if duration < min_days:
+            logger.warning(
+                f"Skipping referral reward for user {referred_tg_id}: "
+                f"subscription duration {duration} days < required {min_days} days."
             )
             return False
 
@@ -110,15 +118,11 @@ class ReferralService:
 
             if mode == ReferrerRewardType.DAYS.value:
                 first_level_reward_amount = self.config.shop.REFERRER_LEVEL_ONE_PERIOD
-                second_level_reward_amount = self.config.shop.REFERRER_LEVEL_TWO_PERIOD
             elif mode == ReferrerRewardType.MONEY.value:
                 # TODO: add currency check before usage
                 payment_amount = to_decimal(payment_amount)
                 first_level_rate = Decimal(self.config.shop.REFERRER_LEVEL_ONE_RATE) / Decimal(100)
-                second_level_rate = Decimal(self.config.shop.REFERRER_LEVEL_TWO_RATE) / Decimal(100)
-
                 first_level_reward_amount = to_decimal(payment_amount * first_level_rate)
-                second_level_reward_amount = to_decimal(payment_amount * second_level_rate)
 
             rewards_created = []
 
@@ -129,22 +133,6 @@ class ReferralService:
                     reward_type=ReferrerRewardType.from_str(mode),
                     amount=first_level_reward_amount,
                     reward_level=ReferrerRewardLevel.FIRST_LEVEL,
-                    payment_id=payment_id,
-                )
-                rewards_created.append(reward)
-
-            second_level_referral = await Referral.get_referral(session, referrer_tg_id)
-            if (
-                second_level_reward_amount > 0
-                and second_level_referral
-                and second_level_referral.referrer_tg_id
-            ):
-                reward = await ReferrerReward.create_referrer_reward(
-                    session=session,
-                    user_tg_id=second_level_referral.referrer_tg_id,
-                    reward_type=ReferrerRewardType.from_str(mode),
-                    amount=second_level_reward_amount,
-                    reward_level=ReferrerRewardLevel.SECOND_LEVEL,
                     payment_id=payment_id,
                 )
                 rewards_created.append(reward)

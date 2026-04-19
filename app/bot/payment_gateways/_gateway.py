@@ -32,6 +32,8 @@ class PaymentGateway(ABC):
     name: str
     currency: Currency
     callback: str
+    is_manual: bool = False
+    payment_type: str | None = None
 
     def __init__(
         self,
@@ -68,6 +70,9 @@ class PaymentGateway(ABC):
 
         async with self.session() as session:
             transaction = await Transaction.get_by_id(session=session, payment_id=payment_id)
+            if transaction.status == TransactionStatus.COMPLETED:
+                logger.warning(f"Payment {payment_id} already completed, skipping.")
+                return
             data = SubscriptionData.unpack(transaction.subscription)
             logger.debug(f"Subscription data unpacked: {data}")
             user = await User.get(session=session, tg_id=data.user_id)
@@ -83,6 +88,7 @@ class PaymentGateway(ABC):
                 referred_tg_id=data.user_id,
                 payment_amount=data.price,  # TODO: (!) add currency unified processing
                 payment_id=payment_id,
+                duration=data.duration,
             )
 
         await self.services.notification.notify_developer(

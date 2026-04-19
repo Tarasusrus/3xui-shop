@@ -25,6 +25,12 @@ def support_keyboard(support_id: int) -> InlineKeyboardMarkup:
             callback_data=NavSupport.VPN_NOT_WORKING,
         )
     )
+    builder.row(
+        InlineKeyboardButton(
+            text=_("support:button:write_us"),
+            callback_data=NavSupport.WRITE_US,
+        )
+    )
 
     builder.row(contact_button(support_id))
     builder.row(back_to_main_menu_button())
