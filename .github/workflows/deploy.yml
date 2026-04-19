@@ -1,0 +1,69 @@
+name: Deploy Bot
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            set -e
+
+            # Clone or update repo
+            if [ -d ~/3xui-shop ]; then
+              cd ~/3xui-shop && git pull origin main
+            else
+              git clone https://github.com/Tarasusrus/3xui-shop.git ~/3xui-shop
+              cd ~/3xui-shop
+            fi
+
+            # Write .env from secrets
+            cat > .env << 'ENVEOF'
+            BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+            BOT_DEV_ID=${{ secrets.BOT_DEV_ID }}
+            BOT_SUPPORT_ID=${{ secrets.BOT_SUPPORT_ID }}
+            BOT_DOMAIN=${{ secrets.BOT_DOMAIN }}
+            BOT_ADMINS=${{ secrets.BOT_ADMINS }}
+
+            XUI_USERNAME=${{ secrets.XUI_USERNAME }}
+            XUI_PASSWORD=${{ secrets.XUI_PASSWORD }}
+
+            LETSENCRYPT_EMAIL=${{ secrets.LETSENCRYPT_EMAIL }}
+
+            SHOP_CURRENCY=RUB
+            SHOP_TRIAL_ENABLED=True
+            SHOP_TRIAL_PERIOD=3
+            SHOP_REFERRED_TRIAL_ENABLED=False
+            SHOP_REFERRED_TRIAL_PERIOD=7
+            SHOP_REFERRER_REWARD_ENABLED=True
+            SHOP_REFERRER_REWARD_TYPE=days
+            SHOP_REFERRER_LEVEL_ONE_PERIOD=30
+            SHOP_REFERRER_LEVEL_TWO_PERIOD=0
+            SHOP_REFERRER_MIN_SUBSCRIPTION_DAYS=30
+            SHOP_REFERRER_LEVEL_ONE_RATE=10
+            SHOP_REFERRER_LEVEL_TWO_RATE=0
+            SHOP_BONUS_DEVICES_COUNT=0
+
+            SHOP_PAYMENT_SBP_ENABLED=${{ secrets.SHOP_PAYMENT_SBP_ENABLED }}
+            SHOP_SBP_PHONE=${{ secrets.SHOP_SBP_PHONE }}
+            SHOP_SBP_BANK=${{ secrets.SHOP_SBP_BANK }}
+
+            SHOP_PAYMENT_TON_ENABLED=False
+            SHOP_PAYMENT_STARS_ENABLED=False
+            SHOP_PAYMENT_YOOKASSA_ENABLED=False
+            SHOP_PAYMENT_CRYPTOMUS_ENABLED=False
+            SHOP_PAYMENT_HELEKET_ENABLED=False
+            SHOP_PAYMENT_YOOMONEY_ENABLED=False
+            ENVEOF
+
+            docker compose build
+            docker compose up -d
+            docker compose logs --tail=50 bot
