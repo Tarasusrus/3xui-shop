@@ -57,32 +57,19 @@ async def generate_referral_summary_text(
             reward_type=reward_type,
             reward_level=ReferrerRewardLevel.FIRST_LEVEL,
         )
-        second_level_rewards_sum = await ReferrerReward.get_rewards_sum(
-            session=session,
-            tg_id=user.tg_id,
-            reward_type=reward_type,
-            reward_level=ReferrerRewardLevel.SECOND_LEVEL,
-        )
 
         if reward_type == ReferrerRewardType.DAYS:
             first_referrer_duration = format_subscription_period(
                 config.shop.REFERRER_LEVEL_ONE_PERIOD
             )
-            second_referrer_duration = format_subscription_period(
-                config.shop.REFERRER_LEVEL_TWO_PERIOD
-            )
             text += _("referral:message:user_summary_explain_referrer_days").format(
                 first_referrer_duration=first_referrer_duration,
-                second_referrer_duration=second_referrer_duration,
             )
             first_level_rewards_sum = format_subscription_period(int(first_level_rewards_sum))
-            second_level_rewards_sum = format_subscription_period(int(second_level_rewards_sum))
         elif reward_type == ReferrerRewardType.MONEY:
             first_referrer_rate = config.shop.REFERRER_LEVEL_ONE_RATE
-            second_referrer_rate = config.shop.REFERRER_LEVEL_TWO_RATE
             text += _("referral:message:user_summary_explain_referrer_money").format(
                 first_referrer_rate=first_referrer_rate,
-                second_referrer_rate=second_referrer_rate,
             )
 
             # TODO: handle and format money currencies
@@ -92,7 +79,6 @@ async def generate_referral_summary_text(
         )
         text += _("referral:message:user_summary_referrer_rewards").format(
             first_level_rewards_sum=first_level_rewards_sum,
-            second_level_rewards_sum=second_level_rewards_sum,
             pending_rewards_count=pending_rewards_count,
         )
 

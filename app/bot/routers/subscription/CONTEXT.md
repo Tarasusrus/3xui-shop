@@ -36,6 +36,14 @@
 ### promocode_handler.py
 FSM ввод промокода. Применяет скидку к SubscriptionData.
 
+## Изменения 2026-04-19
+
+`subscription_handler.py:callback_subscription` — добавлен параметр `session: AsyncSession`.
+После получения `client_data` вызывается `Transaction.get_user_history(session, tg_id, limit=5)`.
+Результат передаётся в `show_subscription(history=...)`.
+`show_subscription` форматирует историю через i18n ключ `subscription:message:history` и добавляет к основному тексту.
+Пустая история → секция не отображается.
+
 ## SubscriptionData (models/subscription_data.py)
 CallbackData с prefix="subscription". Поля: state, is_extend, is_change, user_id, devices, duration, price.
 `pack()` / `unpack()` — сериализация в строку для хранения в Transaction.subscription.

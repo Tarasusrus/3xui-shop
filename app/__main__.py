@@ -60,11 +60,20 @@ async def on_startup(
     tasks.transactions.start_scheduler(session=db.session, bot=bot, i18n=i18n)
     if config.shop.REFERRER_REWARD_ENABLED:
         tasks.referral.start_scheduler(
-            session_factory=db.session, referral_service=services.referral
+            session_factory=db.session,
+            referral_service=services.referral,
+            bot=bot,
+            i18n=i18n,
         )
     tasks.subscription_expiry.start_scheduler(
         session_factory=db.session,
         redis=redis,
+        i18n=i18n,
+        vpn_service=services.vpn,
+        notification_service=services.notification,
+    )
+    tasks.subscription_reminders.start_scheduler(
+        session_factory=db.session,
         i18n=i18n,
         vpn_service=services.vpn,
         notification_service=services.notification,

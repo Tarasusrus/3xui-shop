@@ -742,6 +742,9 @@ msgid "main_menu:button:referral"
 msgstr "👥 Referral"
 
 #: app/bot/routers/main_menu/keyboard.py:58
+msgid "main_menu:button:instructions"
+msgstr "📖 Instructions"
+
 msgid "main_menu:button:support"
 msgstr "🆘 Support"
 
@@ -840,6 +843,15 @@ msgid "profile:button:connect"
 msgstr "🔌 Connect"
 
 #: app/bot/routers/referral/handler.py:35
+msgid "referral:message:main"
+msgstr ""
+"🎉 <b>Referral Program</b>\n"
+"\n"
+"Invite friends and earn bonus days on your subscription.\n"
+"Get a reward for every friend who pays.\n"
+"\n"
+"💰 Total earned: <b>{total_bonus_days}</b>"
+
 msgid "referral:message:user_summary"
 msgstr "🎉 Invite friends and get rewarded!\n"
 
@@ -863,30 +875,25 @@ msgstr ""
 msgid "referral:message:user_summary_explain_referrer_days"
 msgstr ""
 "\n"
-"💸 <b>Two-level referral system</b>\n"
+"💸 <b>Referral system</b>\n"
 "👥 <b>For each successful payment</b> for a subscription using your link:\n"
 "1️⃣ You get <b>+{first_referrer_duration}</b> to your subscription\n"
-"2️⃣ You also get <b>+{second_referrer_duration}</b> from users invited by"
-" your referrals!\n"
 
 #: app/bot/routers/referral/handler.py:83
 msgid "referral:message:user_summary_explain_referrer_money"
 msgstr ""
 "\n"
-"💸 <b>Two-level referral system</b>\n"
+"💸 <b>Referral system</b>\n"
 "👥 <b>For each successful payment</b> for a subscription using your link:\n"
 "1️⃣ You get on your balance <b>{first_referrer_rate}%</b> of payments "
 "made by your referral!\n"
-"2️⃣ You also get <b>{second_referrer_rate}%</b> of payments from users "
-"invited by your referrals!\n"
 
 #: app/bot/routers/referral/handler.py:93
 msgid "referral:message:user_summary_referrer_rewards"
 msgstr ""
 "\n"
 "📊 <b>Your reward for payments by referrals</b>\n"
-"First level: {first_level_rewards_sum}\n"
-"Second level: {second_level_rewards_sum}\n"
+"Reward: {first_level_rewards_sum}\n"
 "<i>*(Rewards are credited within 15 minutes. Pending rewards: "
 "{pending_rewards_count})</i>"
 
@@ -1050,6 +1057,53 @@ msgstr ""
 "<i>It seems that you haven't purchased a subscription yet. Buy a "
 "subscription to start using our service.</i>"
 
+msgid "subscription:message:history"
+msgstr ""
+"\n"
+"📋 <b>Recent transactions:</b>\n"
+"{history}"
+
+msgid "subscription:message:info"
+msgstr ""
+"📋 <b>My Subscription</b>\n"
+"\n"
+"Status: {status}\n"
+"Expires: {expiry_time}\n"
+"\n"
+"Transaction history:\n"
+"{history}"
+
+msgid "instructions:message:choose_device"
+msgstr "📱 Choose your device:"
+
+msgid "instructions:message:android"
+msgstr ""
+"🤖 <b>Android</b>\n"
+"\n"
+"Download the app and import your subscription key.\n"
+"Key: <code>{key}</code>"
+
+msgid "instructions:message:iphone"
+msgstr ""
+"🍎 <b>iPhone</b>\n"
+"\n"
+"Download the app and import your subscription key.\n"
+"Key: <code>{key}</code>"
+
+msgid "instructions:message:mac"
+msgstr ""
+"💻 <b>Mac</b>\n"
+"\n"
+"Download the app and import your subscription key.\n"
+"Key: <code>{key}</code>"
+
+msgid "instructions:message:windows"
+msgstr ""
+"🖥 <b>Windows</b>\n"
+"\n"
+"Download the app and import your subscription key.\n"
+"Key: <code>{key}</code>"
+
 #: app/bot/routers/subscription/subscription_handler.py:91
 msgid "subscription:popup:error_fetching_plan"
 msgstr "❌ Your plan is no longer supported. You need to change your subscription."
@@ -1112,9 +1166,21 @@ msgstr ""
 "\n"
 "If the issue persists, please contact support."
 
+msgid "support:message:enter_text"
+msgstr "✍️ Write your message and we will forward it to the support team:"
+
+msgid "support:message:sent"
+msgstr "✅ Your message has been sent. We will get back to you shortly."
+
+msgid "support:message:error"
+msgstr "❌ Failed to send your message. Please try again later."
+
 #: app/bot/routers/support/keyboard.py:10
 msgid "support:button:contact"
 msgstr "👨‍💻 Contact the operator"
+
+msgid "support:button:write_us"
+msgstr "✍️ Write to us"
 
 #: app/bot/routers/support/keyboard.py:18
 msgid "support:button:how_to_connect"
@@ -1156,6 +1222,22 @@ msgstr ""
 "✅ <b>Payment successful!</b>\n"
 "\n"
 "Your subscription has been updated to {device} and {duration}."
+
+#: app/bot/tasks/subscription_reminders.py:1
+msgid "subscription:ntf:reminder_7d"
+msgstr ""
+"⏰ <b>Your subscription expires in 7 days!</b>\n"
+"\n"
+"Devices: {devices}\n"
+"Expires: {expiry_time}"
+
+#: app/bot/tasks/subscription_reminders.py:2
+msgid "subscription:ntf:reminder_3d"
+msgstr ""
+"⚠️ <b>Your subscription expires in 3 days!</b>\n"
+"\n"
+"Devices: {devices}\n"
+"Expires: {expiry_time}"
 
 #: app/bot/tasks/subscription_expiry.py:55
 msgid "task:message:subscription_expiry"

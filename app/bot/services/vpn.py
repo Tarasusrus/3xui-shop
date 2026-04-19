@@ -228,12 +228,21 @@ class VPNService:
         return False
 
     async def extend_subscription(self, user: User, devices: int, duration: int) -> bool:
-        return await self.update_client(
+        updated = await self.update_client(
             user=user,
             devices=devices,
             duration=duration,
             replace_devices=True,
         )
+        if updated:
+            async with self.session() as session:
+                await User.update(
+                    session=session,
+                    tg_id=user.tg_id,
+                    reminded_7d_at=None,
+                    reminded_3d_at=None,
+                )
+        return updated
 
     async def change_subscription(self, user: User, devices: int, duration: int) -> bool:
         if await self.is_client_exists(user):

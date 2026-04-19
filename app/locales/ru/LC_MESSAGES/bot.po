@@ -751,6 +751,9 @@ msgid "main_menu:button:referral"
 msgstr "👥 Пригласить"
 
 #: app/bot/routers/main_menu/keyboard.py:58
+msgid "main_menu:button:instructions"
+msgstr "📖 Инструкции"
+
 msgid "main_menu:button:support"
 msgstr "🆘 Помощь"
 
@@ -850,6 +853,15 @@ msgid "profile:button:connect"
 msgstr "🔌 Подключиться"
 
 #: app/bot/routers/referral/handler.py:35
+msgid "referral:message:main"
+msgstr ""
+"🎉 <b>Реферальная программа</b>\n"
+"\n"
+"Приглашайте друзей и получайте бонусные дни к подписке.\n"
+"За каждого оплатившего друга — бонус на ваш счёт.\n"
+"\n"
+"💰 Всего заработано: <b>{total_bonus_days}</b>"
+
 msgid "referral:message:user_summary"
 msgstr "🎉 Приглашайте друзей и получайте вознаграждение!\n"
 
@@ -874,30 +886,25 @@ msgstr ""
 msgid "referral:message:user_summary_explain_referrer_days"
 msgstr ""
 "\n"
-"💸 <b>Двухуровневая реферальная система</b>\n"
-"👥 <b>За каждую успешную оплату</b> подписки, по вашей ссылке:\n"
+"💸 <b>Реферальная система</b>\n"
+"👥 <b>За каждую успешную оплату</b> подписки по вашей ссылке:\n"
 "1️⃣ Вы получаете <b>+{first_referrer_duration}</b> к своей подписке\n"
-"2️⃣ Вы также получаете <b>+{second_referrer_duration}</b> от "
-"пользователей, приглашенных вашими рефералами!\n"
 
 #: app/bot/routers/referral/handler.py:83
 msgid "referral:message:user_summary_explain_referrer_money"
 msgstr ""
 "\n"
-"💸 <b>Двухуровневая реферальная система</b>\n"
+"💸 <b>Реферальная система</b>\n"
 "👥 <b>За каждую успешную оплату</b> подписки по вашей ссылке:\n"
 "1️⃣ Вы получаете на свой баланс <b>{first_referrer_rate}%</b> платежей, "
 "совершенных вашим рефералом!\n"
-"2️⃣ Также вы получаете <b>{second_referrer_rate}%</b> платежей от "
-"пользователей, приглашенных вашими рефералами!\n"
 
 #: app/bot/routers/referral/handler.py:93
 msgid "referral:message:user_summary_referrer_rewards"
 msgstr ""
 "\n"
 "📊 <b>Ваше вознаграждение за платежи рефералов</b>\n"
-"Первый уровень рефералов: {first_level_rewards_sum}\n"
-"Второй уровень рефералов: {second_level_rewards_sum}\n"
+"Вознаграждение: {first_level_rewards_sum}\n"
 "<i>*(Награды начисляются в течение 15 минут. Ожидают: "
 "{pending_rewards_count})</i>"
 
@@ -1061,6 +1068,53 @@ msgstr ""
 "<i>Похоже, вы еще не приобрели подписку. Купите подписку, чтобы начать "
 "пользоваться нашим сервисом.</i>"
 
+msgid "subscription:message:history"
+msgstr ""
+"\n"
+"📋 <b>Последние транзакции:</b>\n"
+"{history}"
+
+msgid "subscription:message:info"
+msgstr ""
+"📋 <b>Моя подписка</b>\n"
+"\n"
+"Статус: {status}\n"
+"Дата окончания: {expiry_time}\n"
+"\n"
+"История транзакций:\n"
+"{history}"
+
+msgid "instructions:message:choose_device"
+msgstr "📱 Выберите ваше устройство:"
+
+msgid "instructions:message:android"
+msgstr ""
+"🤖 <b>Android</b>\n"
+"\n"
+"Скачайте приложение и импортируйте ключ подписки.\n"
+"Ключ: <code>{key}</code>"
+
+msgid "instructions:message:iphone"
+msgstr ""
+"🍎 <b>iPhone</b>\n"
+"\n"
+"Скачайте приложение и импортируйте ключ подписки.\n"
+"Ключ: <code>{key}</code>"
+
+msgid "instructions:message:mac"
+msgstr ""
+"💻 <b>Mac</b>\n"
+"\n"
+"Скачайте приложение и импортируйте ключ подписки.\n"
+"Ключ: <code>{key}</code>"
+
+msgid "instructions:message:windows"
+msgstr ""
+"🖥 <b>Windows</b>\n"
+"\n"
+"Скачайте приложение и импортируйте ключ подписки.\n"
+"Ключ: <code>{key}</code>"
+
 #: app/bot/routers/subscription/subscription_handler.py:91
 msgid "subscription:popup:error_fetching_plan"
 msgstr ""
@@ -1125,7 +1179,19 @@ msgstr ""
 "\n"
 "Если проблема не устранена, пожалуйста, свяжитесь с оператором."
 
+msgid "support:message:enter_text"
+msgstr "✍️ Напишите ваше сообщение, и мы передадим его оператору:"
+
+msgid "support:message:sent"
+msgstr "✅ Ваше сообщение отправлено. Мы ответим вам в ближайшее время."
+
+msgid "support:message:error"
+msgstr "❌ Не удалось отправить сообщение. Попробуйте позже."
+
 #: app/bot/routers/support/keyboard.py:10
+msgid "support:button:write_us"
+msgstr "✍️ Написать нам"
+
 msgid "support:button:contact"
 msgstr "👨‍💻 Связаться с оператором"
 
@@ -1169,6 +1235,22 @@ msgstr ""
 "✅ <b>Оплата прошла успешно!</b>\n"
 "\n"
 "Ваша подписка была обновлена ​​на {device} и {duration}."
+
+#: app/bot/tasks/subscription_reminders.py:1
+msgid "subscription:ntf:reminder_7d"
+msgstr ""
+"⏰ <b>До окончания подписки 7 дней!</b>\n"
+"\n"
+"Количество устройств: {devices}\n"
+"Заканчивается: {expiry_time}"
+
+#: app/bot/tasks/subscription_reminders.py:2
+msgid "subscription:ntf:reminder_3d"
+msgstr ""
+"⚠️ <b>До окончания подписки 3 дня!</b>\n"
+"\n"
+"Количество устройств: {devices}\n"
+"Заканчивается: {expiry_time}"
 
 #: app/bot/tasks/subscription_expiry.py:55
 msgid "task:message:subscription_expiry"

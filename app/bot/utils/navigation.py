@@ -22,6 +22,7 @@ class NavSupport(str, Enum):
     MAIN = "support"
     HOW_TO_CONNECT = "how_to_connect"
     VPN_NOT_WORKING = "vpn_not_working"
+    WRITE_US = "support_write_us"
 
 
 class NavDownload(str, Enum):

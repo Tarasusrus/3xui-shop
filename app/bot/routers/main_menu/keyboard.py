@@ -4,6 +4,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.bot.utils.navigation import (
     NavAdminTools,
+    NavDownload,
     NavProfile,
     NavReferral,
     NavSubscription,
@@ -44,6 +45,16 @@ def main_menu_keyboard(
         ),
     )
     builder.row(
+        InlineKeyboardButton(
+            text=_("main_menu:button:instructions"),
+            callback_data=NavDownload.MAIN,
+        ),
+        InlineKeyboardButton(
+            text=_("main_menu:button:support"),
+            callback_data=NavSupport.MAIN,
+        ),
+    )
+    builder.row(
         *(
             [
                 InlineKeyboardButton(
@@ -53,10 +64,6 @@ def main_menu_keyboard(
             ]
             if is_referral_available
             else []
-        ),
-        InlineKeyboardButton(
-            text=_("main_menu:button:support"),
-            callback_data=NavSupport.MAIN,
         ),
     )
 
