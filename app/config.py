@@ -71,8 +71,9 @@ class BotConfig:
     ADMINS: list[int]
     DEV_ID: int
     SUPPORT_ID: int
-    DOMAIN: str
+    DOMAIN: str | None
     PORT: int
+    POLLING: bool
 
 
 @dataclass
@@ -281,8 +282,9 @@ def load_config() -> Config:
             ADMINS=bot_admins,
             DEV_ID=env.int("BOT_DEV_ID"),
             SUPPORT_ID=env.int("BOT_SUPPORT_ID"),
-            DOMAIN=f"https://{env.str('BOT_DOMAIN')}",
+            DOMAIN=f"https://{env.str('BOT_DOMAIN')}" if env.str("BOT_DOMAIN", default=None) else None,
             PORT=env.int("BOT_PORT", default=DEFAULT_BOT_PORT),
+            POLLING=env.bool("BOT_POLLING", default=False),
         ),
         shop=ShopConfig(
             EMAIL=env.str("SHOP_EMAIL", default=DEFAULT_SHOP_EMAIL),

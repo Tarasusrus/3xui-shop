@@ -30,8 +30,8 @@ jobs:
             BOT_TOKEN=${{ secrets.BOT_TOKEN }}
             BOT_DEV_ID=${{ secrets.BOT_DEV_ID }}
             BOT_SUPPORT_ID=${{ secrets.BOT_SUPPORT_ID }}
-            BOT_DOMAIN=${{ secrets.BOT_DOMAIN }}
             BOT_ADMINS=${{ secrets.BOT_ADMINS }}
+            BOT_POLLING=True
 
             XUI_USERNAME=${{ secrets.XUI_USERNAME }}
             XUI_PASSWORD=${{ secrets.XUI_PASSWORD }}
