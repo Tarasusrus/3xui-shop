@@ -152,6 +152,7 @@ class VPNService:
 
         new_client = Client(
             email=str(user.tg_id),
+            tg_id=user.tg_id,
             enable=enable,
             id=user.vpn_id,
             expiry_time=days_to_timestamp(duration),
