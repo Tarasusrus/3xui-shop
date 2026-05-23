@@ -75,7 +75,6 @@ async def _try_auto_gift_trial(
     user: User,
     services: ServicesContainer,
     config: Config,
-    state: FSMContext,
 ) -> bool:
     server = await services.server_pool.get_available_server()
     if not server:
@@ -95,13 +94,12 @@ async def _try_auto_gift_trial(
     if not success:
         return False
 
-    sent = await message.answer(
+    await message.answer(
         text=_("subscription:ntf:trial_activate_success").format(
             duration=format_subscription_period(duration),
         ),
         reply_markup=trial_success_keyboard(),
     )
-    await state.update_data({MAIN_MESSAGE_ID_KEY: sent.message_id})
     logger.info(f"Auto-gifted trial ({duration} days) to new user {user.tg_id}.")
     return True
 
@@ -137,20 +135,18 @@ async def command_main_menu(
         else:
             await process_invite_attribution(session=session, user=user, invite_hash=command.args)
 
-    if is_new_user:
-        trial_sent = await _try_auto_gift_trial(
-            message=message, user=user, services=services, config=config, state=state
-        )
-        if trial_sent:
-            await start_onboarding(message=message, state=state, config=config)
-            return
-
     is_admin = await IsAdmin()(user_id=user.tg_id)
     main_menu = await message.answer(
         text=_("main_menu:message:main").format(name=user.first_name),
         reply_markup=main_menu_keyboard(is_admin),
     )
     await state.update_data({MAIN_MESSAGE_ID_KEY: main_menu.message_id})
+
+    if is_new_user:
+        await _try_auto_gift_trial(
+            message=message, user=user, services=services, config=config
+        )
+        await start_onboarding(message=message, state=state, config=config)
 
 
 @router.callback_query(F.data == NavMain.MAIN_MENU)
