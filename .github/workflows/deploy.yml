@@ -50,19 +50,9 @@ jobs:
             SHOP_REFERRER_LEVEL_TWO_RATE=1
             SHOP_BONUS_DEVICES_COUNT=0
 
-            SHOP_PAYMENT_SBP_ENABLED=${{ secrets.SHOP_PAYMENT_SBP_ENABLED }}
+            SHOP_PAYMENT_SBP_ENABLED=True
             SHOP_SBP_PHONE=${{ secrets.SHOP_SBP_PHONE }}
             SHOP_SBP_BANK=${{ secrets.SHOP_SBP_BANK }}
-
-            SHOP_PAYMENT_TON_ENABLED=${{ secrets.SHOP_PAYMENT_TON_ENABLED }}
-            SHOP_TON_ADDRESS=${{ secrets.SHOP_TON_ADDRESS }}
-            SHOP_TON_ACCOUNT=${{ secrets.SHOP_TON_ACCOUNT }}
-            SHOP_TON_PRICE_USDT=${{ secrets.SHOP_TON_PRICE_USDT }}
-
-            SHOP_PAYMENT_YOOKASSA_ENABLED=False
-            SHOP_PAYMENT_CRYPTOMUS_ENABLED=False
-            SHOP_PAYMENT_HELEKET_ENABLED=False
-            SHOP_PAYMENT_YOOMONEY_ENABLED=False
             ENVEOF
 
             docker compose build

@@ -1,12 +1,12 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 
 def get_current_timestamp() -> int:
-    return int(datetime.now(timezone.utc).timestamp() * 1000)
+    return int(datetime.now(UTC).timestamp() * 1000)
 
 
 def add_days_to_timestamp(timestamp: int, days: int) -> int:
-    new_datetime = datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc) + timedelta(days=days)
+    new_datetime = datetime.fromtimestamp(timestamp / 1000, tz=UTC) + timedelta(days=days)
     return int(new_datetime.timestamp() * 1000)
 
 

@@ -40,26 +40,6 @@ msgstr ""
 "User ID: {user_id}\n"
 "<code>{devices}</code> | <code>{duration}</code>"
 
-#: app/bot/payment_gateways/cryptomus.py:42
-msgid "payment:gateway:cryptomus"
-msgstr "Cryptomus"
-
-#: app/bot/payment_gateways/heleket.py:42
-msgid "payment:gateway:heleket"
-msgstr "Heleket"
-
-#: app/bot/payment_gateways/yookassa.py:63
-#: app/bot/payment_gateways/yoomoney.py:56
-msgid "payment:invoice:description"
-msgstr "Subscription | {devices} for {duration}"
-
-#: app/bot/payment_gateways/yookassa.py:46
-msgid "payment:gateway:yookassa"
-msgstr "YooKassa"
-
-#: app/bot/payment_gateways/yoomoney.py:40
-msgid "payment:gateway:yoomoney"
-msgstr "YooMoney"
 
 #: app/bot/routers/admin_tools/admin_tools_handler.py:23
 msgid "admin_tools:message:main"
@@ -954,8 +934,8 @@ msgid "subscription:button:extend"
 msgstr "💳 Extend subscription"
 
 #: app/bot/routers/subscription/keyboard.py:56
-msgid "subscription:button:activate_promocode"
-msgstr "🎟️ Activate promocode"
+msgid "subscription:button:invite_friend"
+msgstr "👥 Invite a friend"
 
 #: app/bot/routers/subscription/keyboard.py:111
 msgid "subscription:button:change_devices"
@@ -1327,9 +1307,6 @@ msgstr[1] ""
 msgid "payment:gateway:sbp"
 msgstr "SBP"
 
-#: app/bot/payment_gateways/ton_manual.py
-msgid "payment:gateway:ton"
-msgstr "TON"
 
 #: app/bot/routers/subscription/keyboard.py
 msgid "subscription:button:i_paid"
@@ -1355,17 +1332,6 @@ msgstr ""
 "\n"
 "After payment press «I paid»."
 
-#: app/bot/routers/subscription/payment_handler.py
-#, python-brace-format
-msgid "payment:message:manual_ton"
-msgstr ""
-"💎 <b>Payment via TON</b>\n"
-"\n"
-"Transfer <b>{amount} USDT</b> to:\n"
-"<code>{address}</code>\n"
-"Comment: <code>{account}</code>\n"
-"\n"
-"After payment press «I paid»."
 
 #: app/bot/routers/subscription/payment_handler.py
 #, python-brace-format

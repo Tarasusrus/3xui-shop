@@ -20,19 +20,11 @@ router = Router(name=__name__)
 
 def _build_manual_payment_text(gateway, data: "SubscriptionData") -> str:
     req = gateway.get_requisites()
-    from app.bot.payment_gateways.sbp_manual import SbpManual
-
-    if isinstance(gateway, SbpManual):
-        return _("payment:message:manual_sbp").format(
-            phone=req.get("phone", ""),
-            bank=req.get("bank", ""),
-            price=data.price,
-            currency=gateway.currency.symbol,
-        )
-    return _("payment:message:manual_ton").format(
-        address=req.get("address", ""),
-        account=req.get("account", ""),
-        amount=req.get("price_usdt", ""),
+    return _("payment:message:manual_sbp").format(
+        phone=req.get("phone", ""),
+        bank=req.get("bank", ""),
+        price=data.price,
+        currency=gateway.currency.symbol,
     )
 
 

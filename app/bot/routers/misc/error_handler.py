@@ -33,7 +33,7 @@ async def errors_handler(event: ErrorEvent, config: Config, services: ServicesCo
         return True
 
     try:
-        text = Text(Bold((type(event.exception).__name__)), f": {str(event.exception)[:1021]}...")
+        text = Text(Bold(type(event.exception).__name__), f": {str(event.exception)[:1021]}...")
         await services.notification.notify_developer(
             text=text.as_html(),
             document=BufferedInputFile(

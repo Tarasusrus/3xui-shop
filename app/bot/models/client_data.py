@@ -1,7 +1,5 @@
 import time
 
-from aiogram.utils.i18n import gettext as _
-
 from app.bot.utils.constants import UNLIMITED
 from app.bot.utils.formatting import format_remaining_time, format_size
 

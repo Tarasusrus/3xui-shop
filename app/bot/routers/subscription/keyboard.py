@@ -10,16 +10,20 @@ from aiogram.utils.i18n import gettext as _
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.bot.models import SubscriptionData
-from app.bot.models.plan import Plan
-from app.bot.payment_gateways import PaymentGateway
 from app.bot.routers.misc.keyboard import (
     back_button,
     back_to_main_menu_button,
     close_notification_button,
 )
 from app.bot.utils.constants import Currency
-from app.bot.utils.formatting import format_device_count, format_subscription_period
-from app.bot.utils.navigation import NavAdminTools, NavDownload, NavMain, NavSubscription
+from app.bot.utils.formatting import format_subscription_period
+from app.bot.utils.navigation import (
+    NavAdminTools,
+    NavDownload,
+    NavMain,
+    NavReferral,
+    NavSubscription,
+)
 
 
 def change_subscription_button() -> InlineKeyboardButton:
@@ -53,29 +57,10 @@ def subscription_keyboard(
         )
 
     builder.button(
-        text=_("subscription:button:activate_promocode"),
-        callback_data=NavSubscription.PROMOCODE,
+        text=_("subscription:button:invite_friend"),
+        callback_data=NavReferral.MAIN,
     )
     builder.adjust(1)
-    builder.row(back_to_main_menu_button())
-    return builder.as_markup()
-
-
-def devices_keyboard(
-    plans: list[Plan],
-    callback_data: SubscriptionData,
-) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-
-    for plan in plans:
-        callback_data.devices = plan.devices
-        builder.button(
-            text=format_device_count(plan.devices),
-            callback_data=callback_data,
-        )
-
-    builder.adjust(2)
-    builder.row(back_button(NavSubscription.MAIN))
     builder.row(back_to_main_menu_button())
     return builder.as_markup()
 
@@ -104,13 +89,7 @@ def duration_keyboard(
     if callback_data.is_extend:
         builder.row(back_button(NavSubscription.MAIN))
     else:
-        callback_data.state = NavSubscription.PROCESS
-        builder.row(
-            back_button(
-                callback_data.pack(),
-                text=_("subscription:button:change_devices"),
-            )
-        )
+        builder.row(back_button(NavSubscription.MAIN))
 
     builder.row(back_to_main_menu_button())
     return builder.as_markup()
@@ -130,7 +109,7 @@ def manual_pay_keyboard(
     builder.row(
         back_button(
             callback_data.pack(),
-            text=_("subscription:button:change_payment_method"),
+            text=_("subscription:button:change_duration"),
         )
     )
     builder.row(back_to_main_menu_button())
@@ -164,37 +143,6 @@ def pay_keyboard(pay_url: str, callback_data: SubscriptionData) -> InlineKeyboar
             text=_("subscription:button:change_payment_method"),
         )
     )
-    builder.row(back_to_main_menu_button())
-    return builder.as_markup()
-
-
-def payment_method_keyboard(
-    plan: Plan,
-    callback_data: SubscriptionData,
-    gateways: list[PaymentGateway],
-) -> InlineKeyboardMarkup:
-    builder = InlineKeyboardBuilder()
-    for gateway in gateways:
-        price = plan.get_price(currency=gateway.currency, duration=callback_data.duration)
-        if price is None:
-            continue
-
-        callback_data.state = gateway.callback
-        builder.row(
-            InlineKeyboardButton(
-                text=f"{gateway.name} | {price} {gateway.currency.symbol}",
-                callback_data=callback_data.pack(),
-            )
-        )
-
-    callback_data.state = NavSubscription.DEVICES
-    builder.row(
-        back_button(
-            callback_data.pack(),
-            text=_("subscription:button:change_duration"),
-        )
-    )
-
     builder.row(back_to_main_menu_button())
     return builder.as_markup()
 

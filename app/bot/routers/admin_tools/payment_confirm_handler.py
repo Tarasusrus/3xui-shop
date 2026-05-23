@@ -17,7 +17,6 @@ router = Router(name=__name__)
 
 _PAYMENT_TYPE_TO_CALLBACK = {
     "sbp_manual": NavSubscription.PAY_SBP,
-    "ton_manual": NavSubscription.PAY_TON,
 }
 
 

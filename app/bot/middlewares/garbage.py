@@ -1,6 +1,6 @@
 import logging
-from mailbox import Message
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Update
@@ -26,8 +26,8 @@ class GarbageMiddleware(BaseMiddleware):
             if user_id == event.bot.id:
                 logger.debug(f"Message from bot {event.bot.id} skipped.")
             elif (
-                event.message.text
-                and not event.message.text.endswith(NavMain.START)
+                (event.message.text
+                and not event.message.text.endswith(NavMain.START))
                 or event.message.forward_from
             ):
                 try:

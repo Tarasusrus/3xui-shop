@@ -7,20 +7,19 @@ from aiogram.utils.i18n import gettext as _
 from aiohttp.web import HTTPFound, Request, Response
 
 from app.bot.models import ServicesContainer
+from app.bot.routers.misc.keyboard import back_to_main_menu_keyboard
 from app.bot.utils.constants import (
     APP_ANDROID_SCHEME,
     APP_IOS_SCHEME,
     APP_WINDOWS_SCHEME,
     MAIN_MESSAGE_ID_KEY,
-    PREVIOUS_CALLBACK_KEY,
 )
-from app.bot.routers.misc.keyboard import back_to_main_menu_keyboard
-from app.bot.utils.navigation import NavDownload, NavMain
+from app.bot.utils.navigation import NavDownload
 from app.bot.utils.network import parse_redirect_url
 from app.config import Config
 from app.db.models import User
 
-from .keyboard import download_keyboard, platforms_keyboard
+from .keyboard import download_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)

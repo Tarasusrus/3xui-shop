@@ -44,15 +44,8 @@ class NavSubscription(str, Enum):
     GET_TRIAL = "get_trial"
 
     PAY = "pay"
-    PAY_YOOKASSA = f"{PAY}_yookassa"
-    PAY_CRYPTOMUS = f"{PAY}_cryptomus"
-    PAY_HELEKET = f"{PAY}_heleket"
-    PAY_YOOMONEY = f"{PAY}_yoomoney"
     PAY_SBP = f"{PAY}_sbp"
-    PAY_TON = f"{PAY}_ton"
     I_PAID = "i_paid"
-    BACK_TO_DURATION = "back_to_duration"
-    BACK_TO_PAYMENT = "back_to_payment"
 
 
 class NavOnboarding(str, Enum):

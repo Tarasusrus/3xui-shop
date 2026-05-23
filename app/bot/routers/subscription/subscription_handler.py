@@ -12,12 +12,7 @@ from app.bot.utils.navigation import NavSubscription
 from app.config import Config
 from app.db.models import Transaction, User
 
-from .keyboard import (
-    devices_keyboard,
-    duration_keyboard,
-    payment_method_keyboard,
-    subscription_keyboard,
-)
+from .keyboard import duration_keyboard, manual_pay_keyboard, subscription_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -124,14 +119,20 @@ async def callback_subscription_change(
     callback: CallbackQuery,
     user: User,
     callback_data: SubscriptionData,
+    config: Config,
     services: ServicesContainer,
 ) -> None:
     logger.info(f"User {user.tg_id} started change subscription.")
-    callback_data.state = NavSubscription.DEVICES
+    callback_data.devices = 1
+    callback_data.state = NavSubscription.DURATION
     callback_data.is_change = True
     await callback.message.edit_text(
-        text=_("subscription:message:devices"),
-        reply_markup=devices_keyboard(services.plan.get_all_plans(), callback_data),
+        text=_("subscription:message:duration"),
+        reply_markup=duration_keyboard(
+            plan_service=services.plan,
+            callback_data=callback_data,
+            currency=config.shop.CURRENCY,
+        ),
     )
 
 
@@ -141,6 +142,7 @@ async def callback_subscription_process(
     user: User,
     session: AsyncSession,
     callback_data: SubscriptionData,
+    config: Config,
     services: ServicesContainer,
 ) -> None:
     logger.info(f"User {user.tg_id} started subscription process.")
@@ -154,22 +156,7 @@ async def callback_subscription_process(
         )
         return
 
-    callback_data.state = NavSubscription.DEVICES
-    await callback.message.edit_text(
-        text=_("subscription:message:devices"),
-        reply_markup=devices_keyboard(services.plan.get_all_plans(), callback_data),
-    )
-
-
-@router.callback_query(SubscriptionData.filter(F.state == NavSubscription.DEVICES))
-async def callback_devices_selected(
-    callback: CallbackQuery,
-    user: User,
-    callback_data: SubscriptionData,
-    config: Config,
-    services: ServicesContainer,
-) -> None:
-    logger.info(f"User {user.tg_id} selected devices: {callback_data.devices}")
+    callback_data.devices = 1
     callback_data.state = NavSubscription.DURATION
     await callback.message.edit_text(
         text=_("subscription:message:duration"),
@@ -190,12 +177,22 @@ async def callback_duration_selected(
     gateway_factory: GatewayFactory,
 ) -> None:
     logger.info(f"User {user.tg_id} selected duration: {callback_data.duration}")
-    callback_data.state = NavSubscription.PAY
+    callback_data.state = NavSubscription.PAY_SBP
+
+    gateway = gateway_factory.get_gateway(NavSubscription.PAY_SBP)
+    plan = services.plan.get_plan(callback_data.devices)
+    price = plan.get_price(currency=gateway.currency, duration=callback_data.duration)
+    callback_data.price = price
+
+    pay_ref = await gateway.create_payment(callback_data)
+    req = gateway.get_requisites()
+    text = _("payment:message:manual_sbp").format(
+        phone=req.get("phone", ""),
+        bank=req.get("bank", ""),
+        price=price,
+        currency=gateway.currency.symbol,
+    )
     await callback.message.edit_text(
-        text=_("subscription:message:payment_method"),
-        reply_markup=payment_method_keyboard(
-            plan=services.plan.get_plan(callback_data.devices),
-            callback_data=callback_data,
-            gateways=gateway_factory.get_gateways(),
-        ),
+        text=text,
+        reply_markup=manual_pay_keyboard(payment_id=pay_ref, callback_data=callback_data),
     )

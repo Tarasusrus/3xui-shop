@@ -166,7 +166,7 @@ async def callback_confirm_send_notification(
             text=_("notification:ntf:invalid_message_text"),
             duration=5,
         )
-        return None
+        return
 
     user_id = await state.get_value(NOTIFICATION_CHAT_IDS_KEY)
     notification = await services.notification.notify_by_id(chat_id=user_id[0], text=text)
@@ -251,7 +251,7 @@ async def callback_confirm_send_notification_all(
             text=_("notification:ntf:invalid_message_text"),
             duration=5,
         )
-        return None
+        return
 
     await state.update_data({NOTIFICATION_MESSAGE_TEXT_KEY: text})
     users = await User.get_all(session=session)
@@ -375,7 +375,7 @@ async def callback_confirm_edit_notification(
             text=_("notification:ntf:invalid_message_text"),
             duration=5,
         )
-        return None
+        return
 
     await state.update_data({NOTIFICATION_MESSAGE_TEXT_KEY: text})
 
@@ -390,7 +390,7 @@ async def callback_confirm_edit_notification(
             )
         success = 0
         edited = False
-        for chat_id, last_message_id in zip(chat_ids, last_message_ids):
+        for chat_id, last_message_id in zip(chat_ids, last_message_ids, strict=False):
 
             try:
                 edited = await callback.message.bot.edit_message_text(
@@ -420,7 +420,7 @@ async def callback_confirm_edit_notification(
                 text=_("notification:ntf:edited_failed"),
                 duration=5,
             )
-            return None
+            return
 
         if chat_ids_count > 1:
             await services.notification.notify_by_message(
@@ -458,7 +458,7 @@ async def callback_delete_notification(
     chat_ids_count = len(chat_ids)
 
     if last_message_ids and chat_ids and chat_ids_count > 0:
-        for chat_id, last_message_id in zip(chat_ids, last_message_ids):
+        for chat_id, last_message_id in zip(chat_ids, last_message_ids, strict=False):
             deleted = False
             success = 0
 
@@ -485,7 +485,7 @@ async def callback_delete_notification(
                 text=_("notification:ntf:deleted_failed"),
                 duration=5,
             )
-            return None
+            return
 
         if chat_ids_count > 1:
             await services.notification.notify_by_message(

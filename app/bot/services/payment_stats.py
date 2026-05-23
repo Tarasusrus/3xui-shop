@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, Optional
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -27,9 +26,9 @@ class PaymentStatsService:
     async def get_user_payment_stats(
         self,
         user_id: int,
-        session: Optional[AsyncSession] = None,
-        payment_method_currencies: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, float]:
+        session: AsyncSession | None = None,
+        payment_method_currencies: dict[str, str] | None = None,
+    ) -> dict[str, float]:
         """
         Calculate total payments by currency for a specific user using transactions table.
 
@@ -42,7 +41,7 @@ class PaymentStatsService:
             Dict mapping currency codes to total amounts
         """
 
-        async def _get_stats(s: AsyncSession) -> Dict[str, float]:
+        async def _get_stats(s: AsyncSession) -> dict[str, float]:
             # Get completed transactions for this user
             query = await s.execute(
                 select(Transaction).where(
@@ -91,9 +90,9 @@ class PaymentStatsService:
 
     async def get_total_revenue_stats(
         self,
-        session: Optional[AsyncSession] = None,
-        payment_method_currencies: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, float]:
+        session: AsyncSession | None = None,
+        payment_method_currencies: dict[str, str] | None = None,
+    ) -> dict[str, float]:
         """
         Calculate total revenue across all completed transactions by currency.
 
@@ -105,7 +104,7 @@ class PaymentStatsService:
             Dict mapping currency codes to total amounts
         """
 
-        async def _get_stats(s: AsyncSession) -> Dict[str, float]:
+        async def _get_stats(s: AsyncSession) -> dict[str, float]:
             query = await s.execute(
                 select(Transaction).where(Transaction.status == TransactionStatus.COMPLETED)
             )

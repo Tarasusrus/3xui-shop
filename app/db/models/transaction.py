@@ -81,7 +81,7 @@ class Transaction(Base):
             .where(
                 Transaction.tg_id == tg_id,
                 Transaction.status == TransactionStatus.PENDING,
-                Transaction.payment_type.in_(["sbp_manual", "ton_manual"]),
+                Transaction.payment_type.in_(["sbp_manual"]),
             )
             .order_by(Transaction.created_at.desc())
         )
@@ -94,7 +94,7 @@ class Transaction(Base):
             .options(selectinload(Transaction.user))
             .where(
                 Transaction.status == TransactionStatus.PENDING,
-                Transaction.payment_type.in_(["sbp_manual", "ton_manual"]),
+                Transaction.payment_type.in_(["sbp_manual"]),
             )
             .order_by(Transaction.created_at.asc())
         )

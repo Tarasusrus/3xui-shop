@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Any, Optional, Self
+from typing import Any, Self
 
 from sqlalchemy import ForeignKey, String, func, select, update
 from sqlalchemy.exc import IntegrityError
@@ -69,11 +69,11 @@ class User(Base):
         back_populates="referred",
         uselist=False,
     )
-    source_invite_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    reminded_7d_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
-    reminded_3d_at: Mapped[Optional[datetime]] = mapped_column(nullable=True)
-    device: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    source_invite_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    reminded_7d_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    reminded_3d_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    device: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    email: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     def __repr__(self) -> str:
         return (

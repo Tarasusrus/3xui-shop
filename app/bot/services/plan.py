@@ -17,12 +17,12 @@ class PlanService:
             raise FileNotFoundError(f"File '{file_path}' does not exist.")
 
         try:
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 self.data = json.load(f)
             logger.info(f"Loaded plans data from '{file_path}'.")
         except json.JSONDecodeError:
             logger.error(f"Failed to parse file '{file_path}'. Invalid JSON format.")
-            raise ValueError(f"File '{file_path}' is not a valid JSON file.")
+            raise ValueError(f"File '{file_path}' is not a valid JSON file.") from None
 
         if "plans" not in self.data or not isinstance(self.data["plans"], list):
             logger.error(f"'plans' key is missing or not a list in '{file_path}'.")

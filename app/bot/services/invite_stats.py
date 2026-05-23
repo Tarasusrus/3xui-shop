@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.bot.services import PaymentStatsService
@@ -38,8 +38,8 @@ class InviteStatsService:
     async def get_detailed_stats(
         self,
         invite_name: str,
-        session: Optional[AsyncSession] = None,
-        payment_method_currencies: Optional[Dict[str, str]] = None,
+        session: AsyncSession | None = None,
+        payment_method_currencies: dict[str, str] | None = None,
     ) -> InviteStats:
         """
         Get detailed statistics for a specific invite link.
@@ -75,7 +75,7 @@ class InviteStatsService:
                 )
                 .distinct()
             )
-            paid_users = set(user_id for user_id, in tx_users_query)
+            paid_users = {user_id for user_id, in tx_users_query}
 
             # Get users with more than one transaction
             repeat_users_query = await s.execute(
@@ -87,10 +87,10 @@ class InviteStatsService:
                 .group_by(Transaction.tg_id)
                 .having(func.count(Transaction.id) > 1)
             )
-            repeat_customers = set(user_id for user_id, in repeat_users_query)
+            repeat_customers = {user_id for user_id, in repeat_users_query}
 
             # Get revenue totals from payment stats service
-            all_revenue: Dict[str, float] = {}
+            all_revenue: dict[str, float] = {}
             for user_id in user_ids:
                 user_revenue = await self.payment_stats.get_user_payment_stats(
                     user_id=user_id, session=s, payment_method_currencies=payment_method_currencies

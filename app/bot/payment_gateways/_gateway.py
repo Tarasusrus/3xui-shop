@@ -5,7 +5,6 @@ from aiogram import Bot
 from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.utils.i18n import I18n
 from aiogram.utils.i18n import gettext as _
-from aiogram.utils.i18n import lazy_gettext as __
 from aiohttp.web import Application
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -23,8 +22,6 @@ from app.db.models import Transaction, User
 
 logger = logging.getLogger(__name__)
 
-from app.bot.models import SubscriptionData
-from app.bot.utils.constants import Currency
 
 
 class PaymentGateway(ABC):

@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Optional, Self
+from typing import Self
 
 from sqlalchemy import Boolean, DateTime, Integer, String, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,7 +38,7 @@ class Invite(Base):
             raise
 
     @classmethod
-    async def get_by_hash(cls, session: AsyncSession, hash_code: str) -> Optional[Self]:
+    async def get_by_hash(cls, session: AsyncSession, hash_code: str) -> Self | None:
         result = await session.execute(select(cls).where(cls.hash_code == hash_code))
         return result.scalars().first()
 

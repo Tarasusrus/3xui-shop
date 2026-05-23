@@ -1,5 +1,6 @@
 import logging
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject, Update
@@ -33,7 +34,7 @@ class MaintenanceMiddleware(BaseMiddleware):
 
                 if self.active and not is_admin and user.id != event.bot.id:
                     logger.info(f"User {user.id} tried to use bot in maintenance")
-                    
+
                     if event.message:
                         message = event.message
                     elif event.callback_query and event.callback_query.message:

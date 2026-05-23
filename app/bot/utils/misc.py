@@ -1,7 +1,6 @@
 import hashlib
 import secrets
 import string
-import uuid
 from datetime import datetime
 
 CHARSET = string.ascii_uppercase + string.digits

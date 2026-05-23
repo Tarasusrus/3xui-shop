@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.bot.services import (
-        NotificationService,
-        PlanService,
-        ServerPoolService,
-        VPNService,
-        ReferralService,
-        SubscriptionService,
-        PaymentStatsService,
         InviteStatsService,
+        NotificationService,
+        PaymentStatsService,
+        PlanService,
+        ReferralService,
+        ServerPoolService,
+        SubscriptionService,
+        VPNService,
     )
 
 from dataclasses import dataclass

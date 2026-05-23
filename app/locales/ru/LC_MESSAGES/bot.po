@@ -43,26 +43,6 @@ msgstr ""
 "ID пользователя: <code>{user_id}</code>\n"
 "<code>{devices}</code> | <code>{duration}</code>"
 
-#: app/bot/payment_gateways/cryptomus.py:42
-msgid "payment:gateway:cryptomus"
-msgstr "Cryptomus"
-
-#: app/bot/payment_gateways/heleket.py:42
-msgid "payment:gateway:heleket"
-msgstr "Heleket"
-
-#: app/bot/payment_gateways/yookassa.py:63
-#: app/bot/payment_gateways/yoomoney.py:56
-msgid "payment:invoice:description"
-msgstr "Подписка | {devices} на {duration}"
-
-#: app/bot/payment_gateways/yookassa.py:46
-msgid "payment:gateway:yookassa"
-msgstr "ЮKassa"
-
-#: app/bot/payment_gateways/yoomoney.py:40
-msgid "payment:gateway:yoomoney"
-msgstr "ЮMoney"
 
 #: app/bot/routers/admin_tools/admin_tools_handler.py:23
 msgid "admin_tools:message:main"
@@ -964,8 +944,8 @@ msgid "subscription:button:extend"
 msgstr "💳 Продлить подписку"
 
 #: app/bot/routers/subscription/keyboard.py:56
-msgid "subscription:button:activate_promocode"
-msgstr "🎟️ Активировать промокод"
+msgid "subscription:button:invite_friend"
+msgstr "👥 Пригласить друга"
 
 #: app/bot/routers/subscription/keyboard.py:111
 msgid "subscription:button:change_devices"
@@ -1342,9 +1322,6 @@ msgstr[2] "{} месяцев"
 msgid "payment:gateway:sbp"
 msgstr "СБП"
 
-#: app/bot/payment_gateways/ton_manual.py
-msgid "payment:gateway:ton"
-msgstr "TON"
 
 #: app/bot/routers/subscription/keyboard.py
 msgid "subscription:button:i_paid"
@@ -1370,17 +1347,6 @@ msgstr ""
 "\n"
 "После оплаты нажмите кнопку «Я оплатил»."
 
-#: app/bot/routers/subscription/payment_handler.py
-#, python-brace-format
-msgid "payment:message:manual_ton"
-msgstr ""
-"💎 <b>Оплата через TON</b>\n"
-"\n"
-"Переведите <b>{amount} USDT</b> на адрес:\n"
-"<code>{address}</code>\n"
-"Комментарий: <code>{account}</code>\n"
-"\n"
-"После оплаты нажмите кнопку «Я оплатил»."
 
 #: app/bot/routers/subscription/payment_handler.py
 #, python-brace-format

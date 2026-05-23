@@ -1,6 +1,6 @@
 import logging
 import math
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import ROUND_DOWN, Decimal
 
 from aiogram.utils.i18n import gettext as _
@@ -33,8 +33,8 @@ def format_remaining_time(timestamp: int) -> str:
         if timestamp == -1:
             return UNLIMITED
 
-        now = datetime.now(timezone.utc)
-        expiry_datetime = datetime.fromtimestamp(timestamp / 1000, timezone.utc)
+        now = datetime.now(UTC)
+        expiry_datetime = datetime.fromtimestamp(timestamp / 1000, UTC)
         time_left = expiry_datetime - now
 
         days, remainder = divmod(time_left.total_seconds(), 86400)

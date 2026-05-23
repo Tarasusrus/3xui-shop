@@ -27,8 +27,6 @@ async def callback_admin_tools(callback: CallbackQuery, user: User) -> None:
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Transaction
-
 
 @router.callback_query(F.data == NavAdminTools.TEST, IsAdmin())
 async def callback_admin_tools(
