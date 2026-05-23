@@ -62,11 +62,11 @@ async def callback_profile(
             )
             return
 
-    reply_markup = (
-        profile_keyboard()
-        if client_data and not client_data.has_subscription_expired
-        else buy_subscription_keyboard()
-    )
+    if client_data and not client_data.has_subscription_expired:
+        reply_markup = profile_keyboard()
+    else:
+        trial_available = await services.subscription.is_trial_available(user=user)
+        reply_markup = buy_subscription_keyboard(trial_available=trial_available)
     await callback.message.edit_text(
         text=await prepare_message(user=user, client_data=client_data),
         reply_markup=reply_markup,

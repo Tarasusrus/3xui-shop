@@ -105,13 +105,6 @@ def manual_pay_keyboard(
             callback_data=f"{NavSubscription.I_PAID}:{payment_id}",
         )
     )
-    callback_data.state = NavSubscription.DURATION
-    builder.row(
-        back_button(
-            callback_data.pack(),
-            text=_("subscription:button:change_duration"),
-        )
-    )
     builder.row(back_to_main_menu_button())
     return builder.as_markup()
 

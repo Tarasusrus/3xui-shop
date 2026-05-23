@@ -8,6 +8,7 @@ from aiogram.utils.i18n import gettext as _
 
 from app.bot.models import ServicesContainer, SubscriptionData
 from app.bot.payment_gateways import GatewayFactory
+from app.bot.routers.misc.keyboard import back_to_main_menu_keyboard
 from app.bot.utils.formatting import format_subscription_period
 from app.bot.utils.navigation import NavSubscription
 from app.db.models import User
@@ -102,15 +103,24 @@ async def callback_i_paid(
     payment_id = callback.data.split(":", 1)[1]
     logger.info(f"User {user.tg_id} claimed payment {payment_id}")
 
-    await services.notification.notify_admins(
-        text=_("payment:message:pending_review").format(
-            user_id=user.tg_id,
-            payment_id=payment_id,
-        ),
-        reply_markup=admin_confirm_payment_keyboard(payment_id),
-    )
-    await services.notification.show_popup(
-        callback=callback,
-        text=_("payment:popup:awaiting_review"),
-    )
+    try:
+        await services.notification.notify_admins(
+            text=_("payment:message:pending_review").format(
+                user_id=user.tg_id,
+                payment_id=payment_id,
+            ),
+            reply_markup=admin_confirm_payment_keyboard(payment_id),
+        )
+    except Exception:
+        logger.exception(f"Admin notification failed for payment {payment_id}")
+    finally:
+        await services.notification.show_popup(
+            callback=callback,
+            text=_("payment:popup:awaiting_review"),
+        )
+
+    try:
+        await callback.message.edit_reply_markup(reply_markup=back_to_main_menu_keyboard())
+    except Exception:
+        logger.debug(f"Failed to edit message after i_paid for user {user.tg_id}")
 

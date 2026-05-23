@@ -6,8 +6,16 @@ from app.bot.routers.misc.keyboard import back_to_main_menu_button
 from app.bot.utils.navigation import NavDownload, NavProfile, NavSubscription
 
 
-def buy_subscription_keyboard() -> InlineKeyboardMarkup:
+def buy_subscription_keyboard(trial_available: bool = False) -> InlineKeyboardMarkup:
     builder = InlineKeyboardBuilder()
+
+    if trial_available:
+        builder.row(
+            InlineKeyboardButton(
+                text=_("subscription:button:get_trial"),
+                callback_data=NavSubscription.GET_TRIAL,
+            )
+        )
 
     builder.row(
         InlineKeyboardButton(
