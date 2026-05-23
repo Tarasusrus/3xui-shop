@@ -8,12 +8,7 @@ from app.bot.models import ServicesContainer
 from app.config import Config
 
 from ._gateway import PaymentGateway
-from .cryptomus import Cryptomus
-from .heleket import Heleket
 from .sbp_manual import SbpManual
-from .ton_manual import TonManual
-from .yookassa import Yookassa
-from .yoomoney import Yoomoney
 
 
 class GatewayFactory:
@@ -43,16 +38,5 @@ class GatewayFactory:
         services: ServicesContainer,
     ) -> None:
         dependencies = [app, config, session, storage, bot, i18n, services]
-
-        gateways = [
-            (config.shop.PAYMENT_CRYPTOMUS_ENABLED, Cryptomus),
-            (config.shop.PAYMENT_HELEKET_ENABLED, Heleket),
-            (config.shop.PAYMENT_YOOKASSA_ENABLED, Yookassa),
-            (config.shop.PAYMENT_YOOMONEY_ENABLED, Yoomoney),
-            (config.shop.PAYMENT_SBP_ENABLED, SbpManual),
-            (config.shop.PAYMENT_TON_ENABLED, TonManual),
-        ]
-
-        for enabled, gateway_cls in gateways:
-            if enabled:
-                self.register_gateway(gateway_cls(*dependencies))
+        if config.shop.PAYMENT_SBP_ENABLED:
+            self.register_gateway(SbpManual(*dependencies))

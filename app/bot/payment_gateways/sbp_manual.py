@@ -1,6 +1,6 @@
 import logging
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from aiogram import Bot
 from aiogram.fsm.storage.redis import RedisStorage
@@ -48,7 +48,7 @@ class SbpManual(PaymentGateway):
 
     async def create_payment(self, data: SubscriptionData) -> str:
         payment_id = f"sbp_{uuid.uuid4().hex[:16]}"
-        expires_at = datetime.utcnow() + timedelta(
+        expires_at = datetime.now(UTC).replace(tzinfo=None) + timedelta(
             days=self.config.shop.PENDING_PAYMENT_TTL_DAYS
         )
 

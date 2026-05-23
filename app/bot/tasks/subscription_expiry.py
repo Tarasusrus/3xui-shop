@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from aiogram.utils.i18n import I18n
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -34,15 +34,19 @@ async def notify_users_with_expiring_subscription(
             if await redis.get(user_notified_key):
                 continue
 
-            client_data = await vpn_service.get_client_data(user)
+            try:
+                client_data = await vpn_service.get_client_data(user)
+            except Exception as e:
+                logger.warning(f"[Background task] Failed to get client data for user {user.tg_id}: {e}")
+                continue
 
             # Skip if no client data or subscription is unlimited
             if not client_data or client_data._expiry_time == -1:
                 continue
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             expiry_datetime = datetime.fromtimestamp(
-                client_data._expiry_time / 1000, timezone.utc
+                client_data._expiry_time / 1000, UTC
             )
             time_left = expiry_datetime - now
 
@@ -50,24 +54,21 @@ async def notify_users_with_expiring_subscription(
             if not (timedelta(0) < time_left <= timedelta(hours=24)):
                 continue
 
-            # BUG: The button and expiry_time will not be translated
-            # (the translation logic needs to be changed outside the current context)
-            await notification_service.notify_by_id(
-                chat_id=user.tg_id,
-                text=i18n.gettext(
-                    "task:message:subscription_expiry",
-                    locale=user.language_code,
-                ).format(
-                    devices=client_data.max_devices,
-                    expiry_time=client_data.expiry_time,
-                ),
-                # reply_markup=keyboard_extend
-            )
-
-            await redis.set(user_notified_key, "true", ex=timedelta(hours=24))
-            logger.info(
-                f"[Background task] Sent expiry notification to user {user.tg_id}."
-            )
+            try:
+                await notification_service.notify_by_id(
+                    chat_id=user.tg_id,
+                    text=i18n.gettext(
+                        "task:message:subscription_expiry",
+                        locale=user.language_code,
+                    ).format(
+                        devices=client_data.max_devices,
+                        expiry_time=client_data.expiry_time,
+                    ),
+                )
+                await redis.set(user_notified_key, "true", ex=timedelta(hours=24))
+                logger.info(f"[Background task] Sent expiry notification to user {user.tg_id}.")
+            except Exception as e:
+                logger.warning(f"[Background task] Failed to notify user {user.tg_id}: {e}")
         logger.info("[Background task] Subscription check finished.")
 
 
@@ -84,6 +85,6 @@ def start_scheduler(
         "interval",
         minutes=15,
         args=[session_factory, redis, i18n, vpn_service, notification_service],
-        next_run_time=datetime.now(tz=timezone.utc),
+        next_run_time=datetime.now(tz=UTC),
     )
     scheduler.start()

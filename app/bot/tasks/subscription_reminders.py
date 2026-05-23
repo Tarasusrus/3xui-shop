@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from aiogram.utils.i18n import I18n
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -30,55 +30,62 @@ async def send_subscription_reminders(
         )
 
         for user in users:
-            client_data = await vpn_service.get_client_data(user)
+            try:
+                client_data = await vpn_service.get_client_data(user)
+            except Exception as e:
+                logger.warning(f"[Background task] Failed to get client data for user {user.tg_id}: {e}")
+                continue
 
             if not client_data or client_data._expiry_time == -1:
                 continue
 
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             expiry_datetime = datetime.fromtimestamp(
-                client_data._expiry_time / 1000, timezone.utc
+                client_data._expiry_time / 1000, UTC
             )
             time_left = expiry_datetime - now
 
             if time_left <= timedelta(0):
                 continue
 
-            if _7D_LOWER < time_left <= _7D_UPPER and user.reminded_7d_at is None:
-                await notification_service.notify_by_id(
-                    chat_id=user.tg_id,
-                    text=i18n.gettext(
-                        "subscription:ntf:reminder_7d",
-                        locale=user.language_code,
-                    ).format(
-                        devices=client_data.max_devices,
-                        expiry_time=client_data.expiry_time,
-                    ),
-                )
-                await User.update(
-                    session=session,
-                    tg_id=user.tg_id,
-                    reminded_7d_at=now,
-                )
-                logger.info(f"[Background task] Sent 7d reminder to user {user.tg_id}.")
+            try:
+                if _7D_LOWER < time_left <= _7D_UPPER and user.reminded_7d_at is None:
+                    await notification_service.notify_by_id(
+                        chat_id=user.tg_id,
+                        text=i18n.gettext(
+                            "subscription:ntf:reminder_7d",
+                            locale=user.language_code,
+                        ).format(
+                            devices=client_data.max_devices,
+                            expiry_time=client_data.expiry_time,
+                        ),
+                    )
+                    await User.update(
+                        session=session,
+                        tg_id=user.tg_id,
+                        reminded_7d_at=now,
+                    )
+                    logger.info(f"[Background task] Sent 7d reminder to user {user.tg_id}.")
 
-            elif _3D_LOWER < time_left <= _3D_UPPER and user.reminded_3d_at is None:
-                await notification_service.notify_by_id(
-                    chat_id=user.tg_id,
-                    text=i18n.gettext(
-                        "subscription:ntf:reminder_3d",
-                        locale=user.language_code,
-                    ).format(
-                        devices=client_data.max_devices,
-                        expiry_time=client_data.expiry_time,
-                    ),
-                )
-                await User.update(
-                    session=session,
-                    tg_id=user.tg_id,
-                    reminded_3d_at=now,
-                )
-                logger.info(f"[Background task] Sent 3d reminder to user {user.tg_id}.")
+                elif _3D_LOWER < time_left <= _3D_UPPER and user.reminded_3d_at is None:
+                    await notification_service.notify_by_id(
+                        chat_id=user.tg_id,
+                        text=i18n.gettext(
+                            "subscription:ntf:reminder_3d",
+                            locale=user.language_code,
+                        ).format(
+                            devices=client_data.max_devices,
+                            expiry_time=client_data.expiry_time,
+                        ),
+                    )
+                    await User.update(
+                        session=session,
+                        tg_id=user.tg_id,
+                        reminded_3d_at=now,
+                    )
+                    logger.info(f"[Background task] Sent 3d reminder to user {user.tg_id}.")
+            except Exception as e:
+                logger.warning(f"[Background task] Failed to send reminder to user {user.tg_id}: {e}")
 
         logger.info("[Background task] Subscription reminder check finished.")
 
@@ -95,6 +102,6 @@ def start_scheduler(
         "interval",
         hours=1,
         args=[session_factory, i18n, vpn_service, notification_service],
-        next_run_time=datetime.now(tz=timezone.utc),
+        next_run_time=datetime.now(tz=UTC),
     )
     scheduler.start()

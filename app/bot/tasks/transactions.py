@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 
 from aiogram import Bot
 from aiogram.utils.i18n import I18n
@@ -12,7 +12,7 @@ from app.db.models import Transaction
 
 logger = logging.getLogger(__name__)
 
-MANUAL_PAYMENT_TYPES = {PaymentType.SBP_MANUAL.value, PaymentType.TON_MANUAL.value}
+MANUAL_PAYMENT_TYPES = {PaymentType.SBP_MANUAL.value}
 
 
 async def cancel_expired_transactions(
@@ -22,7 +22,7 @@ async def cancel_expired_transactions(
 ) -> None:
     session: AsyncSession
     async with session_factory() as session:
-        now = datetime.utcnow()  # naive UTC — matches expires_at stored by payment gateways
+        now = datetime.now(UTC).replace(tzinfo=None)  # naive UTC — SQLite stores naive datetimes
         stmt = select(Transaction).where(
             Transaction.status == TransactionStatus.PENDING,
             Transaction.expires_at <= now,
@@ -66,6 +66,6 @@ def start_scheduler(
         "interval",
         minutes=15,
         args=[session, bot, i18n],
-        next_run_time=datetime.utcnow(),
+        next_run_time=datetime.now(UTC).replace(tzinfo=None),
     )
     scheduler.start()
