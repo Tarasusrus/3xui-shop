@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.models import ClientData, ServicesContainer, SubscriptionData
 from app.bot.payment_gateways import GatewayFactory
+from app.bot.utils.formatting import format_subscription_period
 from app.bot.utils.navigation import NavSubscription
 from app.config import Config
 from app.db.models import Transaction, User
@@ -36,10 +37,15 @@ async def show_subscription(
         text = _("subscription:message:not_active")
 
     if history:
-        history_lines = "\n".join(
-            f"• {t.subscription} — {t.status.value} ({t.created_at.strftime('%d.%m.%Y')})"
-            for t in history
-        )
+        def _fmt_transaction(t: Transaction) -> str:
+            try:
+                data = SubscriptionData.unpack(t.subscription)
+                label = f"{format_subscription_period(data.duration)} — {int(data.price)} ₽"
+            except Exception:
+                label = t.subscription
+            return f"• {label} — {t.status.value} ({t.created_at.strftime('%d.%m.%Y')})"
+
+        history_lines = "\n".join(_fmt_transaction(t) for t in history)
         text += "\n\n" + _("subscription:message:history").format(history=history_lines)
 
     await callback.message.edit_text(
@@ -93,7 +99,9 @@ async def callback_subscription_extend(
     logger.info(f"User {user.tg_id} started extend subscription.")
     client = await services.vpn.is_client_exists(user)
 
-    current_devices = await services.vpn.get_limit_ip(user=user, client=client)
+    raw_limit = await services.vpn.get_limit_ip(user=user, client=client)
+    # limit_ip=0 in 3x-ui means unlimited — fall back to default plan (1 device)
+    current_devices = 1 if (raw_limit is None or raw_limit == 0) else raw_limit
     if not services.plan.get_plan(current_devices):
         await services.notification.show_popup(
             callback=callback,

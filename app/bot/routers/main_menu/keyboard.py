@@ -30,7 +30,7 @@ def main_menu_keyboard(
     builder.row(
         InlineKeyboardButton(
             text=_("main_menu:button:pay"),
-            callback_data=NavSubscription.PAY,
+            callback_data=NavSubscription.MAIN,
         ),
     )
     builder.row(
