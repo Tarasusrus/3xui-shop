@@ -5,15 +5,20 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import CallbackQuery
 from aiogram.utils.i18n import gettext as _
+from redis.asyncio.client import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bot.models import ServicesContainer, SubscriptionData
 from app.bot.payment_gateways import GatewayFactory
 from app.bot.routers.misc.keyboard import back_to_main_menu_keyboard
+from app.bot.utils.constants import TransactionStatus
 from app.bot.utils.formatting import format_subscription_period
 from app.bot.utils.navigation import NavSubscription
-from app.db.models import User
+from app.db.models import Transaction, User
 
 from .keyboard import admin_confirm_payment_keyboard, manual_pay_keyboard, pay_keyboard
+
+_I_PAID_LOCK_TTL = 3600  # seconds — lock TTL for idempotency
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -99,9 +104,49 @@ async def callback_i_paid(
     callback: CallbackQuery,
     user: User,
     services: ServicesContainer,
+    session: AsyncSession,
+    redis: Redis,
 ) -> None:
     payment_id = callback.data.split(":", 1)[1]
     logger.info(f"User {user.tg_id} claimed payment {payment_id}")
+
+    # Validate: payment_id must exist in DB, belong to this user, and be PENDING
+    transaction = await Transaction.get_by_id(session=session, payment_id=payment_id)
+    if not transaction or transaction.tg_id != user.tg_id:
+        logger.warning(
+            f"i_paid rejected: payment_id={payment_id!r} not found or wrong owner "
+            f"(user {user.tg_id})"
+        )
+        await services.notification.show_popup(
+            callback=callback, text=_("payment:popup:error")
+        )
+        return
+
+    if transaction.status != TransactionStatus.PENDING:
+        logger.info(
+            f"i_paid ignored: payment {payment_id} already in status {transaction.status} "
+            f"for user {user.tg_id}"
+        )
+        await services.notification.show_popup(
+            callback=callback, text=_("payment:popup:awaiting_review")
+        )
+        return
+
+    # Atomic idempotency lock — prevents double admin notification on rapid taps
+    lock_key = f"i_paid_lock:{payment_id}"
+    acquired = await redis.set(lock_key, "1", nx=True, ex=_I_PAID_LOCK_TTL)
+    if not acquired:
+        logger.info(f"i_paid duplicate ignored for payment {payment_id} user {user.tg_id}")
+        await services.notification.show_popup(
+            callback=callback, text=_("payment:popup:awaiting_review")
+        )
+        return
+
+    # Remove button first — even if admin notification fails, button is gone
+    try:
+        await callback.message.edit_reply_markup(reply_markup=back_to_main_menu_keyboard())
+    except Exception:
+        logger.debug(f"Failed to remove i_paid button for user {user.tg_id}")
 
     try:
         await services.notification.notify_admins(
@@ -113,14 +158,9 @@ async def callback_i_paid(
         )
     except Exception:
         logger.exception(f"Admin notification failed for payment {payment_id}")
-    finally:
-        await services.notification.show_popup(
-            callback=callback,
-            text=_("payment:popup:awaiting_review"),
-        )
 
-    try:
-        await callback.message.edit_reply_markup(reply_markup=back_to_main_menu_keyboard())
-    except Exception:
-        logger.debug(f"Failed to edit message after i_paid for user {user.tg_id}")
+    await services.notification.show_popup(
+        callback=callback,
+        text=_("payment:popup:awaiting_review"),
+    )
 

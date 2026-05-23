@@ -66,6 +66,9 @@ class ServerPoolService:
         except Exception as exception:
             logger.error(f"Failed to fetch inbounds: {exception}")
             return None
+        if not inbounds:
+            logger.error("Inbound list is empty — cannot resolve inbound_id.")
+            return None
         return inbounds[0].id
 
     async def get_connection(self, user: User) -> Connection | None:
@@ -125,11 +128,15 @@ class ServerPoolService:
 
         logger.info(f"Sync complete. Currently active servers: {len(self._servers)}")
 
-    async def assign_server_to_user(self, user: User) -> None:
+    async def assign_server_to_user(self, user: User) -> bool:
+        server = await self.get_available_server()
+        if not server:
+            logger.error(f"Cannot assign server to user {user.tg_id}: no available servers.")
+            return False
         async with self.session() as session:
-            server = await self.get_available_server()
             user.server_id = server.id
             await User.update(session=session, tg_id=user.tg_id, server_id=server.id)
+        return True
 
     async def get_available_server(self) -> Server | None:
         await self.sync_servers()

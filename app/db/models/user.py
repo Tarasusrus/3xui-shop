@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Any, Self
 
 from sqlalchemy import ForeignKey, String, func, select, update
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column, relationship, selectinload
@@ -152,21 +153,38 @@ class User(Base):
         """
         Updates the trial status of a user.
 
+        When used=True, uses a conditional UPDATE (WHERE is_trial_used=False) to prevent
+        a TOCTOU race: if two concurrent requests pass is_trial_available() simultaneously,
+        only one will get rowcount=1 and proceed; the other gets rowcount=0 and is rejected.
+
         Args:
             session (AsyncSession): Database session.
             tg_id (int): Telegram user ID.
             used (bool): Whether the trial has been used.
 
         Returns:
-            bool: True if updated, False otherwise.
+            bool: True if row was actually updated, False if not found or already set.
         """
-        user = await cls.get(session=session, tg_id=tg_id)
+        if used:
+            # Conditional UPDATE — only succeeds if trial was not yet used (race-safe)
+            result: CursorResult = await session.execute(
+                update(User)
+                .where(User.tg_id == tg_id, User.is_trial_used == False)  # noqa: E712
+                .values(is_trial_used=True)
+            )
+            await session.commit()
+            if result.rowcount == 0:
+                logger.warning(
+                    f"Trial already used or user not found for tg_id={tg_id} (rowcount=0)."
+                )
+                return False
+            logger.info(f"Trial status set to True for user {tg_id}.")
+            return True
 
-        if not user:
-            logger.warning(f"User {tg_id} not found to update trial status.")
-            return False
-
-        await session.execute(update(User).where(User.tg_id == tg_id).values(is_trial_used=used))
+        # Rollback path (used=False): unconditional, only called on VPN failure
+        await session.execute(
+            update(User).where(User.tg_id == tg_id).values(is_trial_used=False)
+        )
         await session.commit()
-        logger.info(f"Trial status updated for user {tg_id}: {used}")
+        logger.info(f"Trial status rolled back to False for user {tg_id}.")
         return True

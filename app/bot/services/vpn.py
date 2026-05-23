@@ -144,7 +144,11 @@ class VPNService:
     ) -> bool:
         logger.info(f"Creating new client {user.tg_id} | {devices} devices {duration} days.")
 
-        await self.server_pool_service.assign_server_to_user(user)
+        assigned = await self.server_pool_service.assign_server_to_user(user)
+        if not assigned:
+            logger.error(f"Aborting create_client for user {user.tg_id}: server assignment failed.")
+            return False
+
         connection = await self.server_pool_service.get_connection(user)
 
         if not connection:
