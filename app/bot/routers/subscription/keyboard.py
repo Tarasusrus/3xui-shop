@@ -102,7 +102,7 @@ def manual_pay_keyboard(
     builder.row(
         InlineKeyboardButton(
             text=_("subscription:button:i_paid"),
-            callback_data=f"{NavSubscription.I_PAID}:{payment_id}",
+            callback_data=f"{NavSubscription.I_PAID.value}:{payment_id}",
         )
     )
     builder.row(back_to_main_menu_button())
@@ -114,11 +114,11 @@ def admin_confirm_payment_keyboard(payment_id: str) -> InlineKeyboardMarkup:
     builder.row(
         InlineKeyboardButton(
             text=_("admin:button:confirm_payment"),
-            callback_data=f"{NavAdminTools.CONFIRM_PAYMENT}:{payment_id}",
+            callback_data=f"{NavAdminTools.CONFIRM_PAYMENT.value}:{payment_id}",
         ),
         InlineKeyboardButton(
             text=_("admin:button:reject_payment"),
-            callback_data=f"{NavAdminTools.REJECT_PAYMENT}:{payment_id}",
+            callback_data=f"{NavAdminTools.REJECT_PAYMENT.value}:{payment_id}",
         ),
     )
     return builder.as_markup()

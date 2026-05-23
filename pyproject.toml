@@ -20,6 +20,11 @@ alembic = "^1.14.0"
 redis = "^5.2.1"
 apscheduler = "^3.11.0"
 
+[tool.poetry.group.dev.dependencies]
+hypothesis = "^6.0"
+pytest = "^9.0"
+pytest-asyncio = "^1.0"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
