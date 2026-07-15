@@ -26,15 +26,16 @@ SQLAlchemy async ORM модели. База — `_base.py` (`Base = DeclarativeB
 - `payment_id` — уникальный ID платежа (String 64), ключ для всех операций
 - `subscription` — сериализованный `SubscriptionData.pack()` — содержит user_id, devices, duration, price, is_extend, is_change
 - `status` — `TransactionStatus` enum: pending/completed/canceled/refunded/expired/rejected
-- `payment_type` — String 32, nullable: `"sbp_manual"` / `"ton_manual"` / NULL для автогейтвеев
-- `expires_at` — DateTime nullable: TTL для pending manual платежей (now + PENDING_PAYMENT_TTL_DAYS)
+- `payment_type` — String 32, nullable: `"sbp_manual"` / `"cryptopay"` / NULL
+- `expires_at` — DateTime nullable: TTL для pending платежей (now + PENDING_PAYMENT_TTL_DAYS)
 
-**Инвариант**: `payment_id` для manual платежей генерируется в гейтвее с префиксом: `sbp_<16hex>` / `ton_<16hex>`.
+**Инвариант**: `payment_id` генерируется в гейтвее с префиксом: `sbp_<16hex>` (SBP) / `cryptopay_<invoice_id>` (CryptoPay).
 
 Classmethods:
 - `get_by_id(payment_id)` — по payment_id (не по id PK)
 - `get_pending_manual(tg_id)` — последний pending manual платёж пользователя
 - `get_pending_for_admin()` — все pending manual (для очереди подтверждений)
+- `get_pending_cryptopay()` — все PENDING cryptopay-транзакции (для poller'а, эпик 3xui-shop-62)
 - `get_user_history(tg_id, limit=20)` — история платежей пользователя
 
 ### Server (`server.py`)

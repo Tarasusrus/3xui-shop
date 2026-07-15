@@ -76,6 +76,7 @@ class TransactionStatus(Enum):
 
 class PaymentType(Enum):
     SBP_MANUAL = "sbp_manual"
+    CRYPTOPAY = "cryptopay"
 
 
 class Currency(Enum):

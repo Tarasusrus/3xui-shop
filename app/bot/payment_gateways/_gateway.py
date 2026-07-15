@@ -61,6 +61,10 @@ class PaymentGateway(ABC):
     async def handle_payment_canceled(self, payment_id: str) -> None:
         pass
 
+    async def close(self) -> None:
+        """Release any long-lived resources (e.g. HTTP sessions). No-op by default."""
+        return
+
     async def _on_payment_succeeded(self, payment_id: str) -> None:
         logger.info(f"Payment succeeded {payment_id}")
 

@@ -28,10 +28,20 @@ from app.config import DEFAULT_BOT_HOST, DEFAULT_LOCALES_DIR, Config, load_confi
 from app.db.database import Database
 
 
-async def on_shutdown(db: Database, bot: Bot, services: ServicesContainer) -> None:
+async def on_shutdown(
+    db: Database,
+    bot: Bot,
+    services: ServicesContainer,
+    gateway_factory: GatewayFactory,
+) -> None:
     await services.notification.notify_developer(BOT_STOPPED_TAG)
     await commands.delete(bot)
     await bot.delete_webhook()
+    for gateway in gateway_factory.get_gateways():
+        try:
+            await gateway.close()
+        except Exception:
+            logging.exception("Failed to close payment gateway")
     await bot.session.close()
     await db.close()
     logging.info("Bot stopped.")
@@ -44,6 +54,7 @@ async def on_startup(
     db: Database,
     redis: Redis,
     i18n: I18n,
+    gateway_factory: GatewayFactory,
 ) -> None:
     if config.bot.POLLING:
         await bot.delete_webhook(drop_pending_updates=True)
@@ -79,6 +90,14 @@ async def on_startup(
         vpn_service=services.vpn,
         notification_service=services.notification,
     )
+    if config.shop.PAYMENT_CRYPTOPAY_ENABLED:
+        from app.bot.utils.navigation import NavSubscription
+
+        tasks.cryptopay_poll.start_scheduler(
+            session_factory=db.session,
+            gateway=gateway_factory.get_gateway(NavSubscription.PAY_CRYPTOPAY),
+            interval_sec=config.shop.CRYPTOPAY_POLL_INTERVAL_SEC,
+        )
 
 
 async def main() -> None:

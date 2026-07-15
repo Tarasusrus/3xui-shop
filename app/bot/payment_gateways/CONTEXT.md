@@ -8,8 +8,8 @@
 - `name` — отображаемое название (lazy_gettext)
 - `currency` — `Currency` enum (RUB или USD)
 - `callback` — строка из `NavSubscription`, используется как ключ в фабрике
-- `is_manual` — False для автогейтвеев, True для ручных (СБП, TON)
-- `payment_type` — None для автогейтвеев, строковое значение PaymentType для ручных
+- `is_manual` — False для авто-гейтвеев (CryptoPay), True для ручных (СБП)
+- `payment_type` — строковое значение `PaymentType` (`sbp_manual` / `cryptopay`)
 
 Абстрактные методы:
 - `create_payment(data: SubscriptionData) -> str` — для автогейтвеев возвращает pay_url; для manual — возвращает payment_id
@@ -19,32 +19,51 @@
 - `_on_payment_succeeded` — обновляет Transaction(COMPLETED), выдаёт реф-награды, уведомляет dev, вызывает vpn.create/extend/change_subscription
 - `_on_payment_canceled` — обновляет Transaction(CANCELED), уведомляет dev
 
-## Автогейтвеи (webhook-based)
+## Фактический инвентарь гейтвеев (2026-07-14)
 
-| Класс | callback | currency | webhook |
-|-------|----------|----------|---------|
-| Cryptomus | pay_cryptomus | USD | /cryptomus |
-| Heleket | pay_heleket | USD | /heleket |
-| Yookassa | pay_yookassa | RUB | /yookassa |
-| Yoomoney | pay_yoomoney | RUB | /yoomoney |
+В форке реально существуют **только два** файла-гейтвея: `sbp_manual.py`, `cryptopay.py`.
+Cryptomus/Heleket/Yookassa/Yoomoney/TonManual — **фантомы** из апстрима, файлов нет.
 
-Флоу: `create_payment` → Transaction(PENDING) → возвращает URL → пользователь платит → webhook → `handle_payment_succeeded`.
+## Авто-гейтвеи (без ручного подтверждения)
+
+| Класс | callback | currency | приём оплаты |
+|-------|----------|----------|--------------|
+| CryptoPayGateway | pay_cryptopay | RUB (fiat) | POLLING getInvoices |
+
+### CryptoPayGateway (`cryptopay.py` + `cryptopay_api.py`) — эпик 3xui-shop-62
+
+Первый авто-гейтвей форка. Приём криптооплаты через Crypto Pay API (@CryptoBot),
+**без публичного HTTPS-вебхука** (бот в polling-режиме).
+
+Флоу:
+`create_payment` → `api.create_invoice(currency_type='fiat', fiat='RUB', amount=data.price)`
+→ Transaction(PENDING, payment_type='cryptopay', expires_at, `payment_id=cryptopay_{invoice_id}`)
+→ возвращает `bot_invoice_url` (URL-кнопка «Оплатить»)
+→ фоновый поллер `tasks/cryptopay_poll.py` вызывает `getInvoices(status='paid')`
+→ `handle_payment_succeeded` (идемпотентно через `_on_payment_succeeded` COMPLETED-skip).
+
+- **Нет webhook, нет проверки подписи** — статус читается авторизованным `getInvoices`.
+- **Прайсинг**: `fiat='RUB'`, `amount=data.price`. Новый `Currency` НЕ вводится.
+- `payment_id` формат: `cryptopay_<invoice_id>`. Хелперы `make_payment_id` /
+  `invoice_id_from_payment_id`.
+- `api` (`CryptoPayAPI`) — raw aiohttp, без SDK (нет дрейфа импортов). `get_invoices`
+  resilient (→ `[]` на сетевой/API ошибке), `create_invoice` кидает `CryptoPayAPIError`.
+- base URL: mainnet `pay.crypt.bot/api`, testnet `testnet-pay.crypt.bot/api`;
+  header `Crypto-Pay-API-Token`.
 
 ## Manual гейтвеи (ручное подтверждение)
 
 | Класс | callback | currency | payment_type |
 |-------|----------|----------|--------------|
 | SbpManual | pay_sbp | RUB | sbp_manual |
-| TonManual | pay_ton | USD | ton_manual |
 
 Флоу: `create_payment` → Transaction(PENDING, payment_type, expires_at) → возвращает payment_id → показываем реквизиты → юзер жмёт "Я оплатил" → notify_admins → admin confirm → `handle_payment_succeeded`.
 
-**payment_id формат**: `sbp_<16hex>` / `ton_<16hex>`.
+**payment_id формат**: `sbp_<16hex>`.
 **expires_at**: `now() + config.shop.PENDING_PAYMENT_TTL_DAYS` (default 3 дня).
 
 `get_requisites()` — возвращает dict с реквизитами из конфига:
 - SBP: `{phone, bank}`
-- TON: `{address, account, price_usdt}`
 
 ## GatewayFactory (`gateway_factory.py`)
 
@@ -52,19 +71,19 @@
 `get_gateway(name)` — по callback-строке.
 `get_gateways()` — все зарегистрированные (используется для отображения кнопок оплаты).
 
-Порядок регистрации: Cryptomus → Heleket → Yookassa → Yoomoney → SbpManual → TonManual.
+Порядок регистрации: SbpManual (if `PAYMENT_SBP_ENABLED`) → CryptoPayGateway (if `PAYMENT_CRYPTOPAY_ENABLED`).
 
 ## Конфигурация (ShopConfig)
 
 ```
-PAYMENT_SBP_ENABLED=true/false (default false)
+SHOP_PAYMENT_SBP_ENABLED=true/false (default true)
 SHOP_SBP_PHONE=+79001234567
 SHOP_SBP_BANK=Сбербанк
 
-PAYMENT_TON_ENABLED=true/false (default false)
-SHOP_TON_ADDRESS=UQ...
-SHOP_TON_ACCOUNT=@username
-SHOP_TON_PRICE_USDT=1.0
+SHOP_PAYMENT_CRYPTOPAY_ENABLED=true/false (default false)
+SHOP_CRYPTOPAY_TOKEN=<Crypto Pay API token>   # ENABLED=true + пустой → fail-fast при старте
+SHOP_CRYPTOPAY_TESTNET=true/false (default false)
+SHOP_CRYPTOPAY_POLL_INTERVAL_SEC=60 (min 10)
 ```
 
 ## Зависимости
@@ -77,6 +96,11 @@ SHOP_TON_PRICE_USDT=1.0
 ## Известные ограничения (MVP, не блокируют)
 
 - **`_build_manual_payment_text` inline import** — `from sbp_manual import SbpManual` внутри функции как обход circular import. Рефакторинг: вынести функцию в отдельный модуль или использовать `payment_type` string вместо isinstance.
-- **Silent TON fallthrough** — `_build_manual_payment_text` рендерит TON-шаблон для любого неизвестного manual гейтвея. При добавлении третьего manual гейтвея — добавить явную ветку или raise.
+## CryptoPay — инварианты устойчивости (фикс 3xui-shop-65, ревью эпика 62)
+
+- **Persistent `aiohttp.ClientSession`** — `CryptoPayAPI` держит одну сессию (lazy-init на первом вызове внутри loop, reused между poll'ами). `close()` вызывается в `on_shutdown` через `gateway.close()` (базовый `PaymentGateway.close()` — no-op, CryptoPay override закрывает api). Пересоздаётся, если была закрыта.
+- **Poller re-check `status=='paid'`** — `poll_paid_invoices` активирует инвойс только если `invoice['status']=='paid'`, даже если `getInvoices` проигнорит фильтр при заданных `invoice_ids`. Защита от выдачи подписки за неоплаченный инвойс.
+- **Grace-буфер БД vs invoice** — `expires_at` в БД = `now + invoice_ttl + _DB_EXPIRY_GRACE_SEC` (3600с). БД-транзакция живёт дольше инвойса → оплата в последнюю секунду ловится поллером до отмены cleanup-задачей. Оплата возможна только пока инвойс активен.
+- **`create_payment` fail-loud** — если `Transaction.create` вернул None (нет PENDING-строки → поллер не активирует), кидается `RuntimeError`; хендлер `callback_payment_method_selected` ловит и показывает `payment:popup:error` вместо битого URL.
 - **Expired TTL не блокирует confirm** — pending транзакция с истёкшим `expires_at` всё равно подтверждается. TTL сейчас только для cleanup-задачи, которая ещё не реализована.
 - **Race condition частично закрыт** — `_on_payment_succeeded` теперь проверяет `status == COMPLETED` и выходит. Но check-and-update не атомарный (нет `SELECT FOR UPDATE`). Для малого числа админов приемлемо.

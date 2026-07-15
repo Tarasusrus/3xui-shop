@@ -16,11 +16,13 @@
 ### payment_handler.py
 Обработка выбора метода оплаты.
 
-- `callback_payment_method_selected` — ловит `F.state.startswith(PAY)` (включает pay_sbp, pay_ton)
+- `callback_payment_method_selected` — ловит `F.state.startswith(PAY)` (pay_sbp, pay_cryptopay)
 - Бранч по `gateway.is_manual`:
-  - False → `gateway.create_payment()` → pay_url → `pay_keyboard` (URL-кнопка)
-  - True → `gateway.create_payment()` → payment_id → `_build_manual_payment_text` + `manual_pay_keyboard`
-- `_build_manual_payment_text(gateway, data)` — форматирует реквизиты: SBP (phone/bank/price/currency) или TON (address/account/amount), isinstance-бранч
+  - False (CryptoPay) → `gateway.create_payment()` → `bot_invoice_url` → `pay_keyboard` (URL-кнопка)
+  - True (SBP) → `gateway.create_payment()` → payment_id → `_build_manual_payment_text` + `manual_pay_keyboard`
+- `_build_manual_payment_text(gateway, data)` — форматирует реквизиты SBP (phone/bank/price/currency) через `gateway.get_requisites()`
+
+Реальные гейтвеи: SbpManual (manual) + CryptoPayGateway (auto, poll-based, эпик 3xui-shop-62). TON — фантом, удалён.
 - `I_PAID` handler — `F.data.startswith("i_paid")`, парсит payment_id из callback → notify_admins с `admin_confirm_payment_keyboard`
 - Admin confirm/reject — в `admin_tools/payment_confirm_handler.py` ✅
 

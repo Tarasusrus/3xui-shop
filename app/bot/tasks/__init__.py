@@ -1,1 +1,7 @@
-from . import referral, subscription_expiry, subscription_reminders, transactions
+from . import (
+    cryptopay_poll,
+    referral,
+    subscription_expiry,
+    subscription_reminders,
+    transactions,
+)

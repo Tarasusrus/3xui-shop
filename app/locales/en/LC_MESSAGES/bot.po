@@ -1304,6 +1304,16 @@ msgid "payment:gateway:sbp"
 msgstr "SBP"
 
 
+#: app/bot/payment_gateways/cryptopay.py
+msgid "payment:gateway:cryptopay"
+msgstr "Crypto (@CryptoBot)"
+
+
+#: app/bot/routers/subscription/keyboard.py
+msgid "payment:message:choose_method"
+msgstr "💳 Choose a payment method:"
+
+
 #: app/bot/routers/subscription/keyboard.py
 msgid "subscription:button:i_paid"
 msgstr "✅ I paid"

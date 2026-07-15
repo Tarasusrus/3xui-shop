@@ -95,6 +95,21 @@ def duration_keyboard(
     return builder.as_markup()
 
 
+def payment_method_keyboard(
+    gateways: list, callback_data: SubscriptionData
+) -> InlineKeyboardMarkup:
+    builder = InlineKeyboardBuilder()
+    for gateway in gateways:
+        callback_data.state = gateway.callback
+        # str() resolves the lazy_gettext proxy to a plain string in the active
+        # locale — InlineKeyboardButton.text is validated strictly as str by pydantic.
+        builder.button(text=str(gateway.name), callback_data=callback_data)
+    builder.adjust(1)
+    builder.row(back_button(NavSubscription.MAIN))
+    builder.row(back_to_main_menu_button())
+    return builder.as_markup()
+
+
 def manual_pay_keyboard(
     payment_id: str, callback_data: SubscriptionData
 ) -> InlineKeyboardMarkup:
