@@ -1407,3 +1407,20 @@ msgstr "⚠️ Failed to credit bonus. Please contact support."
 
 msgid "onboarding:message:skipped"
 msgstr "👌 Skipped. You can fill this in later via your profile."
+
+
+#: app/bot/payment_gateways/_gateway.py
+msgid "payment:event:activation_failed"
+msgstr ""
+"⚠️ <b>Event: Activation failed!</b>\n"
+"\n"
+"Payment ID: <code>{payment_id}</code>\n"
+"User ID: <code>{user_id}</code>\n"
+"Payment received but 3x-ui is unavailable. Transaction left PENDING; it will be retried."
+
+#: app/bot/payment_gateways/_gateway.py
+msgid "payment:message:activation_pending"
+msgstr ""
+"⏳ <b>Payment received!</b>\n"
+"\n"
+"Key delivery is delayed due to a technical issue. We'll retry automatically — the key will arrive in this chat. If it doesn't within a few minutes, contact support."

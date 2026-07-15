@@ -65,6 +65,49 @@ class PaymentGateway(ABC):
         """Release any long-lived resources (e.g. HTTP sessions). No-op by default."""
         return
 
+    async def _activate_subscription(self, user: User, data: SubscriptionData) -> bool:
+        """Provision/extend/change the VPN. Returns True on confirmed success.
+
+        For a new subscription, `create_subscription` returns False both on a
+        real failure (3x-ui down / empty pool) and when the client already
+        exists. An existing client is an idempotent success, so a re-delivered
+        payment does not loop forever — we fall back to `is_client_exists`.
+        """
+        if data.is_extend:
+            ok = await self.services.vpn.extend_subscription(
+                user=user, devices=data.devices, duration=data.duration
+            )
+            if ok:
+                logger.info(f"Subscription extended for user {user.tg_id}")
+            return ok
+        if data.is_change:
+            ok = await self.services.vpn.change_subscription(
+                user=user, devices=data.devices, duration=data.duration
+            )
+            if ok:
+                logger.info(f"Subscription changed for user {user.tg_id}")
+            return ok
+
+        created = await self.services.vpn.create_subscription(
+            user=user, devices=data.devices, duration=data.duration
+        )
+        if created:
+            logger.info(f"Subscription created for user {user.tg_id}")
+            return True
+        if await self.services.vpn.is_client_exists(user):
+            logger.info(f"Subscription client already exists for user {user.tg_id}; treating as success.")
+            return True
+        return False
+
+    async def _notify_activation_success(self, user: User, data: SubscriptionData) -> None:
+        if data.is_extend:
+            await self.services.notification.notify_extend_success(user_id=user.tg_id, data=data)
+        elif data.is_change:
+            await self.services.notification.notify_change_success(user_id=user.tg_id, data=data)
+        else:
+            key = await self.services.vpn.get_key(user)
+            await self.services.notification.notify_purchase_success(user_id=user.tg_id, key=key)
+
     async def _on_payment_succeeded(self, payment_id: str) -> None:
         logger.info(f"Payment succeeded {payment_id}")
 
@@ -77,6 +120,38 @@ class PaymentGateway(ABC):
             logger.debug(f"Subscription data unpacked: {data}")
             user = await User.get(session=session, tg_id=data.user_id)
 
+        locale = user.language_code if user else DEFAULT_LANGUAGE
+
+        # Provision the VPN BEFORE marking the transaction COMPLETED. If 3x-ui is
+        # unavailable or the pool is empty, activation fails and the transaction
+        # stays PENDING, so the CryptoPay poller (or an admin re-confirm for SBP)
+        # retries it — instead of leaving a paid-but-keyless COMPLETED record.
+        # All exactly-once side effects (COMPLETED, referral rewards, success
+        # notification) run only after confirmed activation. See 3xui-shop-64.
+        with self.i18n.use_locale(locale):
+            activated = await self._activate_subscription(user=user, data=data)
+
+        if not activated:
+            logger.error(
+                f"Activation failed for payment {payment_id} "
+                f"(3x-ui unavailable / empty pool); transaction left PENDING for retry."
+            )
+            with self.i18n.use_locale(locale):
+                await self.services.notification.notify_developer(
+                    text=EVENT_PAYMENT_SUCCEEDED_TAG
+                    + "\n\n"
+                    + _("payment:event:activation_failed").format(
+                        payment_id=payment_id,
+                        user_id=user.tg_id,
+                    ),
+                )
+                await self.services.notification.notify_by_id(
+                    chat_id=user.tg_id,
+                    text=_("payment:message:activation_pending"),
+                )
+            return
+
+        async with self.session() as session:
             await Transaction.update(
                 session=session,
                 payment_id=payment_id,
@@ -91,21 +166,19 @@ class PaymentGateway(ABC):
                 duration=data.duration,
             )
 
-        await self.services.notification.notify_developer(
-            text=EVENT_PAYMENT_SUCCEEDED_TAG
-            + "\n\n"
-            + _("payment:event:payment_succeeded").format(
-                payment_id=payment_id,
-                user_id=user.tg_id,
-                devices=format_device_count(data.devices),
-                duration=format_subscription_period(data.duration),
-            ),
-        )
-
         from app.bot.routers.main_menu.handler import redirect_to_main_menu
 
-        locale = user.language_code if user else DEFAULT_LANGUAGE
         with self.i18n.use_locale(locale):
+            await self.services.notification.notify_developer(
+                text=EVENT_PAYMENT_SUCCEEDED_TAG
+                + "\n\n"
+                + _("payment:event:payment_succeeded").format(
+                    payment_id=payment_id,
+                    user_id=user.tg_id,
+                    devices=format_device_count(data.devices),
+                    duration=format_subscription_period(data.duration),
+                ),
+            )
             await redirect_to_main_menu(
                 bot=self.bot,
                 user=user,
@@ -113,41 +186,7 @@ class PaymentGateway(ABC):
                 config=self.config,
                 storage=self.storage,
             )
-
-            if data.is_extend:
-                await self.services.vpn.extend_subscription(
-                    user=user,
-                    devices=data.devices,
-                    duration=data.duration,
-                )
-                logger.info(f"Subscription extended for user {user.tg_id}")
-                await self.services.notification.notify_extend_success(
-                    user_id=user.tg_id,
-                    data=data,
-                )
-            elif data.is_change:
-                await self.services.vpn.change_subscription(
-                    user=user,
-                    devices=data.devices,
-                    duration=data.duration,
-                )
-                logger.info(f"Subscription changed for user {user.tg_id}")
-                await self.services.notification.notify_change_success(
-                    user_id=user.tg_id,
-                    data=data,
-                )
-            else:
-                await self.services.vpn.create_subscription(
-                    user=user,
-                    devices=data.devices,
-                    duration=data.duration,
-                )
-                logger.info(f"Subscription created for user {user.tg_id}")
-                key = await self.services.vpn.get_key(user)
-                await self.services.notification.notify_purchase_success(
-                    user_id=user.tg_id,
-                    key=key,
-                )
+            await self._notify_activation_success(user=user, data=data)
 
     async def _on_payment_canceled(self, payment_id: str) -> None:
         logger.info(f"Payment canceled {payment_id}")
