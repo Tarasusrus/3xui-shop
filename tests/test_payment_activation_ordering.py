@@ -159,6 +159,24 @@ async def test_existing_client_counts_as_success(monkeypatch, i18n):
 
 
 @pytest.mark.asyncio
+async def test_missing_user_does_not_crash_and_alerts_dev(monkeypatch, i18n):
+    """user=None (deleted/desynced) must not crash the poller (3xui-shop-66)."""
+    gateway, txn, update_mock, services = _make_gateway(
+        monkeypatch, i18n, create_ok=True, exists=False,
+    )
+    monkeypatch.setattr(gw.User, "get", AsyncMock(return_value=None))
+
+    # Must not raise AttributeError.
+    await gateway._on_payment_succeeded("cryptopay_5")
+
+    assert txn.status == TransactionStatus.PENDING
+    assert _completed_calls(update_mock) == []
+    services.vpn.create_subscription.assert_not_called()
+    services.notification.notify_developer.assert_awaited_once()
+    services.notification.notify_purchase_success.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_already_completed_is_noop(monkeypatch, i18n):
     """Idempotency: re-delivery of a COMPLETED payment does nothing."""
     gateway, txn, update_mock, services = _make_gateway(

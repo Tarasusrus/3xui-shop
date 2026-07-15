@@ -10,7 +10,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.bot.models import ServicesContainer, SubscriptionData
 from app.bot.utils.constants import (
-    DEFAULT_LANGUAGE,
     EVENT_PAYMENT_CANCELED_TAG,
     EVENT_PAYMENT_SUCCEEDED_TAG,
     Currency,
@@ -120,7 +119,23 @@ class PaymentGateway(ABC):
             logger.debug(f"Subscription data unpacked: {data}")
             user = await User.get(session=session, tg_id=data.user_id)
 
-        locale = user.language_code if user else DEFAULT_LANGUAGE
+        # A paid transaction whose user row is missing (deleted account / desync)
+        # cannot be activated. Do NOT dereference `user` further — abort with a
+        # developer alert and leave the transaction PENDING for manual review,
+        # otherwise the poller would AttributeError-loop forever. See 3xui-shop-66.
+        if user is None:
+            logger.error(
+                f"Payment {payment_id}: user {data.user_id} not found in DB; "
+                f"cannot activate. Transaction left PENDING for manual review."
+            )
+            await self.services.notification.notify_developer(
+                text=f"{EVENT_PAYMENT_SUCCEEDED_TAG}\n\n"
+                f"⚠️ Payment <code>{payment_id}</code>: user <code>{data.user_id}</code> "
+                f"not found in DB — activation skipped, transaction left PENDING.",
+            )
+            return
+
+        locale = user.language_code
 
         # Provision the VPN BEFORE marking the transaction COMPLETED. If 3x-ui is
         # unavailable or the pool is empty, activation fails and the transaction
