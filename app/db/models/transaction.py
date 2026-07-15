@@ -101,6 +101,19 @@ class Transaction(Base):
         return query.scalars().all()
 
     @classmethod
+    async def get_pending_cryptopay(cls, session: AsyncSession) -> list[Self]:
+        query = await session.execute(
+            select(Transaction)
+            .options(selectinload(Transaction.user))
+            .where(
+                Transaction.status == TransactionStatus.PENDING,
+                Transaction.payment_type == "cryptopay",
+            )
+            .order_by(Transaction.created_at.asc())
+        )
+        return query.scalars().all()
+
+    @classmethod
     async def get_user_history(
         cls, session: AsyncSession, tg_id: int, limit: int = 20
     ) -> list[Self]:

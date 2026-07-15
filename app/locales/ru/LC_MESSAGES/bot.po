@@ -1319,6 +1319,16 @@ msgid "payment:gateway:sbp"
 msgstr "СБП"
 
 
+#: app/bot/payment_gateways/cryptopay.py
+msgid "payment:gateway:cryptopay"
+msgstr "Криптовалюта (@CryptoBot)"
+
+
+#: app/bot/routers/subscription/keyboard.py
+msgid "payment:message:choose_method"
+msgstr "💳 Выберите способ оплаты:"
+
+
 #: app/bot/routers/subscription/keyboard.py
 msgid "subscription:button:i_paid"
 msgstr "✅ Я оплатил"

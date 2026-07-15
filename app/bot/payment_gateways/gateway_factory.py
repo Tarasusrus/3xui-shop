@@ -8,6 +8,7 @@ from app.bot.models import ServicesContainer
 from app.config import Config
 
 from ._gateway import PaymentGateway
+from .cryptopay import CryptoPayGateway
 from .sbp_manual import SbpManual
 
 
@@ -40,3 +41,5 @@ class GatewayFactory:
         dependencies = [app, config, session, storage, bot, i18n, services]
         if config.shop.PAYMENT_SBP_ENABLED:
             self.register_gateway(SbpManual(*dependencies))
+        if config.shop.PAYMENT_CRYPTOPAY_ENABLED:
+            self.register_gateway(CryptoPayGateway(*dependencies))

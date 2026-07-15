@@ -38,6 +38,9 @@ DEFAULT_SHOP_REFERRER_MIN_SUBSCRIPTION_DAYS = 30
 DEFAULT_SHOP_BONUS_DEVICES_COUNT = 1
 DEFAULT_SHOP_ONBOARDING_BONUS_DAYS = 4
 DEFAULT_SHOP_PAYMENT_SBP_ENABLED = True
+DEFAULT_SHOP_PAYMENT_CRYPTOPAY_ENABLED = False
+DEFAULT_SHOP_CRYPTOPAY_TESTNET = False
+DEFAULT_SHOP_CRYPTOPAY_POLL_INTERVAL_SEC = 60
 DEFAULT_SHOP_PAYMENT_PERIOD_DAYS = 30
 DEFAULT_SHOP_PENDING_PAYMENT_TTL_DAYS = 3
 DEFAULT_DB_NAME = "bot_database"
@@ -89,6 +92,10 @@ class ShopConfig:
     BONUS_DEVICES_COUNT: int
     ONBOARDING_BONUS_DAYS: int
     PAYMENT_SBP_ENABLED: bool
+    PAYMENT_CRYPTOPAY_ENABLED: bool
+    CRYPTOPAY_TOKEN: str | None
+    CRYPTOPAY_TESTNET: bool
+    CRYPTOPAY_POLL_INTERVAL_SEC: int
     PAYMENT_PERIOD_DAYS: int
     PENDING_PAYMENT_TTL_DAYS: int
     SBP_PHONE: str | None
@@ -178,6 +185,16 @@ def load_config() -> Config:
         )
         referrer_reward_enabled = False
 
+    cryptopay_enabled = env.bool(
+        "SHOP_PAYMENT_CRYPTOPAY_ENABLED", default=DEFAULT_SHOP_PAYMENT_CRYPTOPAY_ENABLED
+    )
+    cryptopay_token = env.str("SHOP_CRYPTOPAY_TOKEN", default=None)
+    if cryptopay_enabled and not cryptopay_token:
+        raise ValueError(
+            "SHOP_PAYMENT_CRYPTOPAY_ENABLED is true but SHOP_CRYPTOPAY_TOKEN is empty. "
+            "Set the Crypto Pay API token (from @CryptoBot → Crypto Pay → API) or disable the gateway."
+        )
+
     return Config(
         bot=BotConfig(
             TOKEN=env.str("BOT_TOKEN"),
@@ -252,6 +269,16 @@ def load_config() -> Config:
             ),
             PAYMENT_SBP_ENABLED=env.bool(
                 "SHOP_PAYMENT_SBP_ENABLED", default=DEFAULT_SHOP_PAYMENT_SBP_ENABLED
+            ),
+            PAYMENT_CRYPTOPAY_ENABLED=cryptopay_enabled,
+            CRYPTOPAY_TOKEN=cryptopay_token,
+            CRYPTOPAY_TESTNET=env.bool(
+                "SHOP_CRYPTOPAY_TESTNET", default=DEFAULT_SHOP_CRYPTOPAY_TESTNET
+            ),
+            CRYPTOPAY_POLL_INTERVAL_SEC=env.int(
+                "SHOP_CRYPTOPAY_POLL_INTERVAL_SEC",
+                default=DEFAULT_SHOP_CRYPTOPAY_POLL_INTERVAL_SEC,
+                validate=Range(min=10, error="SHOP_CRYPTOPAY_POLL_INTERVAL_SEC must be >= 10"),
             ),
             PAYMENT_PERIOD_DAYS=env.int(
                 "SHOP_PAYMENT_PERIOD_DAYS",

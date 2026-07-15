@@ -13,7 +13,7 @@ from app.bot.utils.navigation import NavSubscription
 from app.config import Config
 from app.db.models import Transaction, User
 
-from .keyboard import duration_keyboard, manual_pay_keyboard, subscription_keyboard
+from .keyboard import duration_keyboard, payment_method_keyboard, subscription_keyboard
 
 logger = logging.getLogger(__name__)
 router = Router(name=__name__)
@@ -185,22 +185,16 @@ async def callback_duration_selected(
     gateway_factory: GatewayFactory,
 ) -> None:
     logger.info(f"User {user.tg_id} selected duration: {callback_data.duration}")
-    callback_data.state = NavSubscription.PAY_SBP
 
-    gateway = gateway_factory.get_gateway(NavSubscription.PAY_SBP)
-    plan = services.plan.get_plan(callback_data.devices)
-    price = plan.get_price(currency=gateway.currency, duration=callback_data.duration)
-    callback_data.price = price
+    gateways = gateway_factory.get_gateways()
+    if not gateways:
+        logger.error("No payment gateways registered.")
+        await services.notification.show_popup(callback=callback, text=_("payment:popup:error"))
+        return
 
-    pay_ref = await gateway.create_payment(callback_data)
-    req = gateway.get_requisites()
-    text = _("payment:message:manual_sbp").format(
-        phone=req.get("phone", ""),
-        bank=req.get("bank", ""),
-        price=price,
-        currency=gateway.currency.symbol,
-    )
+    # Show payment-method chooser; actual payment creation is handled by
+    # callback_payment_method_selected (payment_handler.py) for both manual and URL gateways.
     await callback.message.edit_text(
-        text=text,
-        reply_markup=manual_pay_keyboard(payment_id=pay_ref, callback_data=callback_data),
+        text=_("payment:message:choose_method"),
+        reply_markup=payment_method_keyboard(gateways=gateways, callback_data=callback_data),
     )

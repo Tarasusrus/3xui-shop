@@ -1,0 +1,396 @@
+plan:
+  name: "Полный клиентский флоу VPN-бота"
+  phases:
+
+  - id: phase-1
+    name: "Foundation: DB + Config"
+    description: "Новые enum-значения, колонки в Transaction, поля User для напоминаний, расширение конфига. Всё остальное зависит от этой фазы."
+    tasks:
+
+    - id: task-1.1
+      name: "TransactionStatus + PaymentType enums"
+      description: |
+        app/bot/utils/constants.py:
+        - Добавить EXPIRED = "expired", REJECTED = "rejected" в TransactionStatus.
+        - Добавить class PaymentType(Enum): SBP_MANUAL = "sbp_manual", TON_MANUAL = "ton_manual".
+      artifact: "app/bot/utils/constants.py"
+      depends_on: []
+      validation: "python -c 'from app.bot.utils.constants import TransactionStatus, PaymentType; assert TransactionStatus.EXPIRED; assert PaymentType.TON_MANUAL'"
+
+    - id: task-1.2
+      name: "Alembic-миграция: Transaction.expires_at + payment_type"
+      description: |
+        batch_alter_table (SQLite):
+        - expires_at: DateTime nullable=True
+        - payment_type: String(32) nullable=True
+        down_revision = текущий HEAD.
+      artifact: "app/db/migration/versions/<hash>_add_payment_fields_to_transactions.py"
+      depends_on: [task-1.1]
+      validation: "alembic upgrade head && alembic downgrade -1 && alembic upgrade head — без ошибок"
+
+    - id: task-1.3
+      name: "Alembic-миграция: User.reminded_7d_at + reminded_3d_at"
+      description: |
+        batch_alter_table:
+        - reminded_7d_at: DateTime nullable=True
+        - reminded_3d_at: DateTime nullable=True
+      artifact: "app/db/migration/versions/<hash>_add_reminder_fields_to_users.py"
+      depends_on: [task-1.2]
+      validation: "alembic upgrade head без ошибок; поля видны в User ORM"
+
+    - id: task-1.4
+      name: "Обновить ORM Transaction — новые classmethod"
+      description: |
+        app/db/models/transaction.py:
+        - mapped_column expires_at, payment_type.
+        - get_pending_manual(session, tg_id) — PENDING + payment_type IN (sbp_manual, ton_manual).
+        - get_pending_for_admin(session, limit=10) — PENDING ручные, ORDER BY created_at DESC.
+        - get_user_history(session, tg_id, limit=5) — последние 5 транзакций.
+      artifact: "app/db/models/transaction.py"
+      depends_on: [task-1.2]
+      validation: "методы импортируются; get_pending_manual возвращает [] для пользователя без транзакций"
+
+    - id: task-1.5
+      name: "Расширить ShopConfig"
+      description: |
+        app/config.py:
+        - Добавить SBP_PHONE, SBP_BANK, TON_ADDRESS, TON_ACCOUNT, TON_PRICE_USDT,
+          PAYMENT_SBP_ENABLED, PAYMENT_TON_ENABLED,
+          PAYMENT_PERIOD_DAYS=30, PENDING_PAYMENT_TTL_DAYS=3.
+        - Изменить DEFAULT_SHOP_REFERRER_LEVEL_ONE_PERIOD с 10 на 30.
+        - Обновить load_config() с env-чтением новых полей.
+      artifact: "app/config.py"
+      depends_on: []
+      validation: "load_config() не бросает исключений; cfg.shop.PAYMENT_PERIOD_DAYS == 30"
+
+    checkpoint:
+      description: "Миграции применяются без ошибок, все новые поля/enum доступны."
+      criteria:
+        - "alembic upgrade head выполняется чисто"
+        - "TransactionStatus.EXPIRED и PaymentType.SBP_MANUAL доступны"
+        - "Transaction имеет expires_at, payment_type; User имеет reminded_7d_at"
+        - "load_config() не падает"
+
+  - id: phase-2
+    name: "Background Tasks"
+    description: "Рефакторинг scheduler истечения оплат + новая задача напоминаний + уведомления реферера."
+    tasks:
+
+    - id: task-2.1
+      name: "Рефакторинг cancel_expired_transactions"
+      description: |
+        app/bot/tasks/transactions.py:
+        - Принимает bot: Bot.
+        - Ищет PENDING с expires_at <= now() (не created_at + 15min).
+        - payment_type IN (sbp, ton) → EXPIRED + bot.send_message уведомление.
+        - payment_type IS NULL → CANCELED (старое поведение).
+        Обновить start_scheduler и вызов в __main__.py.
+      artifact: "app/bot/tasks/transactions.py, app/__main__.py"
+      depends_on: [task-1.4]
+      validation: "задача не падает на пустой БД; SBP-транзакция с истёкшим expires_at → EXPIRED"
+
+    - id: task-2.2
+      name: "Задача напоминаний subscription_reminders"
+      description: |
+        app/bot/tasks/subscription_reminders.py:
+        - Интервал 60 минут.
+        - Находит пользователей: subscription_end через 7±0.5 дня И reminded_7d_at IS NULL → отправить, записать reminded_7d_at.
+        - Аналогично для 3 дней / reminded_3d_at.
+        - При продлении подписки (extend_subscription) — сбрасывать reminded_7d_at, reminded_3d_at в NULL.
+        Зарегистрировать в __main__.py.
+      artifact: "app/bot/tasks/subscription_reminders.py, app/__main__.py"
+      depends_on: [task-1.3]
+      status: done
+      validation: "задача регистрируется без ошибок; пользователь с subscription_end=now()+7d получает уведомление; повторно не получает"
+
+    - id: task-2.3
+      name: "Уведомление реферера в referral task"
+      description: |
+        app/bot/tasks/referral.py:
+        После успешного process_referrer_rewards_after_payment:
+        - bot.send_message(reward.user_tg_id, _("referral:ntf:bonus_received").format(days=days)).
+        - try/except TelegramAPIError → WARNING.
+        Добавить bot: Bot параметр в start_scheduler.
+      artifact: "app/bot/tasks/referral.py, app/__main__.py"
+      depends_on: [task-2.4]
+      validation: "уведомление отправляется; при заблокированном боте — только WARNING"
+
+    - id: task-2.4
+      name: "i18n: referral:ntf:bonus_received"
+      description: |
+        ru/bot.po + en/bot.po: добавить только строку
+        referral:ntf:bonus_received — «+{days} дней за оплату друга».
+        pybabel compile.
+        Остальные реферальные строки добавляются в phase-5.
+      artifact: "app/locales/ru/LC_MESSAGES/bot.po, app/locales/en/LC_MESSAGES/bot.po"
+      depends_on: []
+      validation: "pybabel compile без ошибок; ключ присутствует в обоих локалях"
+
+    checkpoint:
+      description: "Все фоновые задачи регистрируются, бот стартует без ошибок."
+      criteria:
+        - "Бот стартует, все 3 scheduler'а видны в логах"
+        - "SBP-транзакция с истёкшим expires_at → EXPIRED с уведомлением"
+        - "Пользователь с subscription_end=now()+7d получает напоминание"
+
+  - id: phase-3
+    name: "Payment Flow"
+    description: "Разделы оплаты: ручные методы (СБП + TON). Выбор метода в главном меню."
+    tasks:
+
+    - id: task-3.1
+      name: "Роутер payment_manual (СБП + TON)"
+      description: |
+        app/bot/routers/payment_manual/handler.py:
+        - Callback показа реквизитов СБП: номер, банк, сумма.
+        - Callback показа реквизитов TON: адрес, аккаунт, сумма.
+        - Callback «Я оплатил» (общий для обоих):
+          1. get_pending_manual → блокировка если есть.
+          2. uuid4().hex → payment_id.
+          3. Transaction.create(PENDING, payment_type, expires_at=now()+TTL).
+          4. extend_subscription(user, devices=1, duration=PAYMENT_PERIOD_DAYS).
+          5. Ответить пользователю.
+        keyboard.py: клавиатуры реквизитов + кнопка «Я оплатил».
+      artifact: "app/bot/routers/payment_manual/handler.py, keyboard.py"
+      depends_on: [task-1.4, task-1.5]
+      validation: "Нажатие «Я оплатил» создаёт Transaction в БД; подписка продлена"
+
+    - id: task-3.3
+      name: "Раздел оплаты — выбор метода"
+      description: |
+        app/bot/routers/payment/handler.py (создать или расширить):
+        - Callback на кнопку «Оплатить»: показывает доступные методы (фильтр по конфигу).
+        - Кнопки: «СБП» (если SBP_ENABLED), «TON» (если TON_ENABLED).
+        Обновить main_menu/keyboard.py: кнопка «Оплатить» всегда видна.
+      artifact: "app/bot/routers/payment/handler.py, app/bot/routers/main_menu/keyboard.py"
+      depends_on: [task-3.1]
+      validation: "Меню оплаты показывает только включённые методы"
+
+    - id: task-3.4
+      name: "i18n строки для payment"
+      description: |
+        ru/bot.po + en/bot.po:
+        - payment:message:choose_method
+        - payment:sbp:details, payment:ton:details
+        - payment:manual:pending_blocked, payment:manual:success
+        - payment:ntf:expired, payment:ntf:confirmed, payment:ntf:rejected
+        pybabel compile.
+      artifact: "app/locales/ru/LC_MESSAGES/bot.po, app/locales/en/LC_MESSAGES/bot.po"
+      depends_on: [task-3.1]
+      validation: "pybabel compile без ошибок"
+
+    checkpoint:
+      description: "Полный флоу оплаты проверен в dev-боте для всех методов."
+      criteria:
+        - "СБП: реквизиты → «Я оплатил» → Transaction PENDING, подписка +30 дней"
+        - "TON: аналогично"
+        - "Блокировка повторного «Я оплатил» при наличии PENDING"
+
+  - id: phase-4
+    name: "Client Sections: Подписка, Инструкции, Поддержка"
+    description: "Раздел «Моя подписка» с историей, инструкции по устройствам, форма поддержки."
+    tasks:
+
+    - id: task-4.1
+      name: "Admin panel: /admin_payments"
+      description: |
+        app/bot/routers/admin/payment_handler.py:
+        - /admin_payments (IsAdmin фильтр) → список PENDING ручных оплат (limit 10).
+        - Пусто → «Нет ожидающих оплат».
+        - Callback confirm_payment:<id>: guard → COMPLETED → referral hook → уведомить юзера.
+        - Callback reject_payment:<id>: guard → REJECTED → вычет дней → уведомить юзера.
+        Зарегистрировать в __init__.py.
+      artifact: "app/bot/routers/admin/payment_handler.py"
+      depends_on: [task-1.4, task-3.1]
+      validation: "/admin_payments показывает список; confirm переводит в COMPLETED; reject вычитает дни"
+
+    - id: task-4.2
+      name: "Раздел «Моя подписка»"
+      description: |
+        app/bot/routers/subscription/handler.py (расширить или создать):
+        - Показывает: дата окончания, статус, кнопку «Продлить».
+        - Показывает историю последних 5 транзакций (Transaction.get_user_history).
+        Обновить main_menu/keyboard.py: кнопка «Моя подписка».
+      artifact: "app/bot/routers/subscription/handler.py"
+      depends_on: [task-1.4]
+      validation: "Раздел показывает корректную дату и историю транзакций"
+
+    - id: task-4.3
+      name: "Раздел инструкций"
+      description: |
+        app/bot/routers/instructions/handler.py:
+        - Выбор устройства (ANDROID/IPHONE/MAC/WINDOWS).
+        - Для каждого: ссылка на приложение (из constants), ссылка подписки (vpn_service.get_key), текст из i18n.
+        Обновить main_menu/keyboard.py: кнопка «Инструкции».
+      artifact: "app/bot/routers/instructions/handler.py"
+      depends_on: []
+      validation: "Для каждого устройства отображается ссылка на приложение и текст инструкции"
+
+    - id: task-4.4
+      name: "Раздел поддержки"
+      description: |
+        app/bot/routers/support/handler.py:
+        - Callback «Написать нам» → FSM State waiting_support_message.
+        - Сообщение пользователя → bot.send_message(SUPPORT_ID, ...).
+        - Ошибка → ERROR лог + «Не удалось отправить».
+        Обновить main_menu/keyboard.py: кнопка «Поддержка».
+      artifact: "app/bot/routers/support/handler.py"
+      depends_on: []
+      validation: "Сообщение пересылается на SUPPORT_ID; пользователь видит подтверждение"
+
+    - id: task-4.5
+      name: "i18n строки для новых разделов"
+      description: |
+        ru/bot.po + en/bot.po:
+        - subscription:message:info (дата, статус, история)
+        - instructions:message:choose_device, instructions:message:<device>
+        - support:message:enter_text, support:message:sent, support:message:error
+        - admin:payment:list_item, admin:payment:empty, admin:payment:confirmed, admin:payment:rejected
+        pybabel compile.
+      artifact: "app/locales/ru/LC_MESSAGES/bot.po, app/locales/en/LC_MESSAGES/bot.po"
+      depends_on: [task-4.1, task-4.2, task-4.3, task-4.4]
+      validation: "pybabel compile без ошибок"
+
+    checkpoint:
+      description: "Все клиентские разделы работают в dev-боте."
+      criteria:
+        - "/admin_payments: подтверждение и отклонение работают"
+        - "«Моя подписка» показывает корректный статус и историю"
+        - "Инструкции показывают контент для каждого устройства"
+        - "Поддержка: сообщение доходит до SUPPORT_ID"
+
+  - id: phase-5
+    name: "Referral rework + интеграция"
+    description: "Удаление второго уровня рефералов, обновление UI раздела рефералов, финальная проверка всех флоёв."
+    tasks:
+
+    - id: task-5.1
+      name: "Удалить второй уровень из ReferralService"
+      description: |
+        app/bot/services/referral.py, метод add_referrers_rewards_on_payment:
+        - Удалить блок second_level_referral (переменную и условие).
+        REFERRER_LEVEL_TWO_PERIOD в конфиге не трогать.
+      artifact: "app/bot/services/referral.py"
+      depends_on: []
+      validation: "add_referrers_rewards_on_payment создаёт максимум 1 ReferrerReward на вызов"
+
+    - id: task-5.2
+      name: "Обновить UI раздела «Рефералы»"
+      description: |
+        app/bot/routers/referral/handler.py:
+        - Добавить вывод суммарных бонусных дней:
+          ReferrerReward.get_rewards_sum(session, tg_id, DAYS, FIRST_LEVEL).
+        - Показывать: реферальная ссылка, число друзей, суммарные бонусные дни, условия.
+        Обновить main_menu/keyboard.py: кнопка «Рефералы».
+      artifact: "app/bot/routers/referral/handler.py"
+      depends_on: [task-5.1]
+      validation: "Раздел показывает число друзей и суммарные бонусные дни без ошибок"
+
+    - id: task-5.3
+      name: "i18n: реферальные уведомления + обновлённый UI"
+      description: |
+        ru/bot.po + en/bot.po:
+        - referral:message:main — добавить {total_bonus_days}
+        pybabel compile.
+        (referral:ntf:bonus_received уже добавлена в task-2.4)
+      artifact: "app/locales/ru/LC_MESSAGES/bot.po, app/locales/en/LC_MESSAGES/bot.po"
+      depends_on: [task-5.2, task-2.3]
+      validation: "pybabel compile без ошибок; строки присутствуют в обоих локалях"
+
+    - id: task-5.4
+      name: "Регистрация всех новых роутеров"
+      description: |
+        app/bot/routers/__init__.py:
+        - Импортировать и зарегистрировать: payment_manual, instructions, support.
+        - Убедиться что admin/payment_handler зарегистрирован.
+        - Проверить порядок регистрации (более специфичные фильтры — первее).
+      artifact: "app/bot/routers/__init__.py"
+      depends_on: [task-3.1, task-4.1, task-4.3, task-4.4]
+      validation: "Бот стартует; все роутеры видны в логах инициализации"
+
+    checkpoint:
+      description: "E2E проверка полного флоу: триал → оплата → подтверждение → реферал → напоминание."
+      criteria:
+        - "Новый пользователь: /start → триал 3 дня → онбординг +4 дня"
+        - "СБП: реквизиты → «Я оплатил» → PENDING → подтверждение → COMPLETED → реферер +30 дней"
+        - "Напоминание за 7 и 3 дня отправляется, повторно не отправляется"
+        - "Второй уровень рефералов не начисляется"
+        - "Все разделы главного меню открываются без ошибок"
+
+  - id: phase-6
+    name: "CryptoPay авто-гейтвей (эпик 3xui-shop-62)"
+    description: "Первый авто-гейтвей форка: приём криптооплаты через Crypto Pay API (@CryptoBot), poll-based (без публичного HTTPS-вебхука, бот в polling). Прайсинг fiat=RUB, amount=data.price, нового Currency нет."
+    tasks:
+
+    - id: task-6.1
+      name: "config + ценообразование (fiat=RUB)"
+      description: |
+        PaymentType.CRYPTOPAY, NavSubscription.PAY_CRYPTOPAY;
+        ShopConfig: PAYMENT_CRYPTOPAY_ENABLED (default false), CRYPTOPAY_TOKEN,
+        CRYPTOPAY_TESTNET (default false), CRYPTOPAY_POLL_INTERVAL_SEC (default 60, min 10);
+        .env.example; fail-fast при ENABLED=true + пустой токен.
+      artifact: "app/config.py, app/bot/utils/constants.py, app/bot/utils/navigation.py, .env.example"
+      depends_on: []
+      status: done
+      validation: "load_config raises при ENABLED+пустой токен; PaymentType.CRYPTOPAY и PAY_CRYPTOPAY импортируются"
+
+    - id: task-6.2
+      name: "API-клиент CryptoPayAPI (createInvoice, getInvoices)"
+      description: |
+        Raw aiohttp (без SDK). create_invoice(fiat) -> {invoice_id, bot_invoice_url, status};
+        get_invoices(status, invoice_ids, offset, count) -> list, resilient (->[] на ошибке).
+        Нет проверки подписи webhook. base: pay.crypt.bot/api / testnet-pay.crypt.bot/api.
+      artifact: "app/bot/payment_gateways/cryptopay_api.py"
+      depends_on: [task-6.1]
+      status: done
+      validation: "реальный вызов на testnet: 401 UNAUTHORIZED распарсен, get_invoices resilient"
+
+    - id: task-6.3
+      name: "CryptoPayGateway (create_payment)"
+      description: |
+        is_manual=False, payment_type=cryptopay, currency=RUB, callback=PAY_CRYPTOPAY.
+        create_payment -> create_invoice -> Transaction(PENDING, payment_id=cryptopay_{invoice_id}),
+        возвращает bot_invoice_url. handle_* делегируют в _on_*.
+      artifact: "app/bot/payment_gateways/cryptopay.py"
+      depends_on: [task-6.2]
+      status: done
+      validation: "class attrs; make_payment_id/invoice_id_from_payment_id roundtrip"
+
+    - id: task-6.4
+      name: "Фоновый poller getInvoices + идемпотентная активация"
+      description: |
+        Transaction.get_pending_cryptopay; tasks/cryptopay_poll.py:
+        pending -> invoice_ids -> getInvoices(status=paid) -> handle_payment_succeeded.
+        Идемпотентность из _on_payment_succeeded (COMPLETED-skip). Регистрация в on_startup (if ENABLED).
+      artifact: "app/db/models/transaction.py, app/bot/tasks/cryptopay_poll.py, app/bot/tasks/__init__.py, app/__main__.py"
+      depends_on: [task-6.3]
+      status: done
+      validation: "мок-тест: фильтр cryptopay, запрос paid, активация только оплаченного invoice"
+
+    - id: task-6.5
+      name: "UI (nav/keyboard/i18n + регистрация в фабрике)"
+      description: |
+        gateway_factory регистрирует CryptoPayGateway (if ENABLED);
+        payment_method_keyboard (выбор метода); duration_selected -> chooser (не хардкод SBP);
+        i18n payment:gateway:cryptopay + payment:message:choose_method (en/ru .po + .mo).
+      artifact: "app/bot/payment_gateways/gateway_factory.py, app/bot/routers/subscription/keyboard.py, app/bot/routers/subscription/subscription_handler.py, app/locales/*/LC_MESSAGES/bot.po"
+      depends_on: [task-6.3]
+      status: done
+      validation: "124 теста pass; chooser даёт кнопки PAY_SBP + PAY_CRYPTOPAY"
+
+    - id: task-6.6
+      name: "docs (CONTEXT.md, plan.yaml, constraints)"
+      description: |
+        Обновить CONTEXT.md модулей (payment_gateways, tasks, subscription, db/models),
+        plan.yaml (эта фаза), constraints.md (poll-based, no webhook, fiat RUB).
+      artifact: "CONTEXT.md x4, docs/sdd/plan.yaml, docs/sdd/constraints.md"
+      depends_on: [task-6.4, task-6.5]
+      status: done
+      validation: "docs отражают реальный инвентарь гейтвеев (SBP + CryptoPay, TON-фантом удалён)"
+
+    checkpoint:
+      description: "CryptoPay E2E: выбор метода → invoice → оплата → poller активирует подписку."
+      criteria:
+        - "ENABLED=false → гейтвей не регистрируется, poller не стартует, SBP-флоу не затронут"
+        - "ENABLED=true + токен → кнопка «Криптовалюта» в chooser, URL-инвойс, poller выдаёт подписку по paid"
+        - "Повторный poll не выдаёт подписку дважды (идемпотентность)"
