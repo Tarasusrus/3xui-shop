@@ -49,6 +49,7 @@ class _FakeTxn:
     def __init__(self, status=TransactionStatus.PENDING):
         self.status = status
         self.subscription = "packed"
+        self.retry_notified = False
 
 
 def _make_gateway(monkeypatch, i18n, *, create_ok, exists, is_extend=False, is_change=False):
@@ -63,8 +64,9 @@ def _make_gateway(monkeypatch, i18n, *, create_ok, exists, is_extend=False, is_c
     # DB model classmethods.
     monkeypatch.setattr(gw.Transaction, "get_by_id", AsyncMock(return_value=txn))
 
-    async def _update(session, payment_id, status):
-        txn.status = status
+    async def _update(session, payment_id, **kwargs):
+        for field, value in kwargs.items():
+            setattr(txn, field, value)
     update_mock = AsyncMock(side_effect=_update)
     monkeypatch.setattr(gw.Transaction, "update", update_mock)
     monkeypatch.setattr(gw.User, "get", AsyncMock(return_value=user))
@@ -174,6 +176,37 @@ async def test_missing_user_does_not_crash_and_alerts_dev(monkeypatch, i18n):
     services.vpn.create_subscription.assert_not_called()
     services.notification.notify_developer.assert_awaited_once()
     services.notification.notify_purchase_success.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_activation_failure_notifies_once_across_retries(monkeypatch, i18n):
+    """5 failed poll cycles → exactly one user + one dev notice (3xui-shop-67)."""
+    gateway, txn, _update_mock, services = _make_gateway(
+        monkeypatch, i18n, create_ok=False, exists=False,
+    )
+
+    for _ in range(5):
+        await gateway._on_payment_succeeded("cryptopay_6")
+
+    assert txn.status == TransactionStatus.PENDING
+    assert txn.retry_notified is True
+    assert services.notification.notify_by_id.await_count == 1
+    assert services.notification.notify_developer.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_missing_user_notifies_dev_once_across_retries(monkeypatch, i18n):
+    """user=None over 5 cycles → exactly one dev alert, no spam (3xui-shop-67)."""
+    gateway, txn, _update_mock, services = _make_gateway(
+        monkeypatch, i18n, create_ok=True, exists=False,
+    )
+    monkeypatch.setattr(gw.User, "get", AsyncMock(return_value=None))
+
+    for _ in range(5):
+        await gateway._on_payment_succeeded("cryptopay_7")
+
+    assert txn.retry_notified is True
+    assert services.notification.notify_developer.await_count == 1
 
 
 @pytest.mark.asyncio

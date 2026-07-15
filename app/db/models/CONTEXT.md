@@ -28,6 +28,7 @@ SQLAlchemy async ORM модели. База — `_base.py` (`Base = DeclarativeB
 - `status` — `TransactionStatus` enum: pending/completed/canceled/refunded/expired/rejected
 - `payment_type` — String 32, nullable: `"sbp_manual"` / `"cryptopay"` / NULL
 - `expires_at` — DateTime nullable: TTL для pending платежей (now + PENDING_PAYMENT_TTL_DAYS)
+- `retry_notified` — Boolean, default False, NOT NULL: «юзер/dev уже уведомлены о задержке активации». Гейтит failure-уведомления в `_on_payment_succeeded` от спама при ре-poll PENDING каждые 60с (3xui-shop-67, миграция `d3e4f5a6b7c8`).
 
 **Инвариант**: `payment_id` генерируется в гейтвее с префиксом: `sbp_<16hex>` (SBP) / `cryptopay_<invoice_id>` (CryptoPay).
 
@@ -55,7 +56,7 @@ Classmethods:
 Путь: `app/db/migration/versions/`. Движок: Alembic.
 **SQLite constraint**: enum changes и column renames требуют recreate-table паттерна (`CREATE new → INSERT SELECT → DROP old → RENAME`). Пример: `9aa6ddb8e352_update_transaction_status_enum.py`, `a1b2c3d4e5f6_transaction_manual_payments.py`.
 
-Текущий head: `a1b2c3d4e5f6` (добавлены payment_type, expires_at в transactions + enum +expired/rejected).
+Текущий head: `d3e4f5a6b7c8` (добавлен `retry_notified` в transactions, 3xui-shop-67). Ранее: `a1b2c3d4e5f6` (payment_type, expires_at, enum +expired/rejected), `c1d2e3f4a5b6` (merge heads).
 
 ## Паттерн classmethods
 

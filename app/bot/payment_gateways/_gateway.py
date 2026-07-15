@@ -98,6 +98,18 @@ class PaymentGateway(ABC):
             return True
         return False
 
+    async def _mark_retry_notified(self, payment_id: str) -> None:
+        """Persist that the user/dev have been told about a stalled activation.
+
+        Gates the failure-path notifications so a PENDING transaction re-polled
+        every 60s does not spam the user and developer each cycle. Set only
+        after the notifications were sent. See 3xui-shop-67.
+        """
+        async with self.session() as session:
+            await Transaction.update(
+                session=session, payment_id=payment_id, retry_notified=True
+            )
+
     async def _notify_activation_success(self, user: User, data: SubscriptionData) -> None:
         if data.is_extend:
             await self.services.notification.notify_extend_success(user_id=user.tg_id, data=data)
@@ -128,11 +140,13 @@ class PaymentGateway(ABC):
                 f"Payment {payment_id}: user {data.user_id} not found in DB; "
                 f"cannot activate. Transaction left PENDING for manual review."
             )
-            await self.services.notification.notify_developer(
-                text=f"{EVENT_PAYMENT_SUCCEEDED_TAG}\n\n"
-                f"⚠️ Payment <code>{payment_id}</code>: user <code>{data.user_id}</code> "
-                f"not found in DB — activation skipped, transaction left PENDING.",
-            )
+            if not transaction.retry_notified:
+                await self.services.notification.notify_developer(
+                    text=f"{EVENT_PAYMENT_SUCCEEDED_TAG}\n\n"
+                    f"⚠️ Payment <code>{payment_id}</code>: user <code>{data.user_id}</code> "
+                    f"not found in DB — activation skipped, transaction left PENDING.",
+                )
+                await self._mark_retry_notified(payment_id)
             return
 
         locale = user.language_code
@@ -151,19 +165,21 @@ class PaymentGateway(ABC):
                 f"Activation failed for payment {payment_id} "
                 f"(3x-ui unavailable / empty pool); transaction left PENDING for retry."
             )
-            with self.i18n.use_locale(locale):
-                await self.services.notification.notify_developer(
-                    text=EVENT_PAYMENT_SUCCEEDED_TAG
-                    + "\n\n"
-                    + _("payment:event:activation_failed").format(
-                        payment_id=payment_id,
-                        user_id=user.tg_id,
-                    ),
-                )
-                await self.services.notification.notify_by_id(
-                    chat_id=user.tg_id,
-                    text=_("payment:message:activation_pending"),
-                )
+            if not transaction.retry_notified:
+                with self.i18n.use_locale(locale):
+                    await self.services.notification.notify_developer(
+                        text=EVENT_PAYMENT_SUCCEEDED_TAG
+                        + "\n\n"
+                        + _("payment:event:activation_failed").format(
+                            payment_id=payment_id,
+                            user_id=user.tg_id,
+                        ),
+                    )
+                    await self.services.notification.notify_by_id(
+                        chat_id=user.tg_id,
+                        text=_("payment:message:activation_pending"),
+                    )
+                await self._mark_retry_notified(payment_id)
             return
 
         async with self.session() as session:
