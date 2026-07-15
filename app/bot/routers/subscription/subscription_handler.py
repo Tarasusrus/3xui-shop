@@ -148,22 +148,15 @@ async def callback_subscription_change(
 async def callback_subscription_process(
     callback: CallbackQuery,
     user: User,
-    session: AsyncSession,
     callback_data: SubscriptionData,
     config: Config,
     services: ServicesContainer,
 ) -> None:
     logger.info(f"User {user.tg_id} started subscription process.")
-    server = await services.server_pool.get_available_server()
-
-    if not server:
-        await services.notification.show_popup(
-            callback=callback,
-            text=_("subscription:popup:no_available_servers"),
-            cache_time=120,
-        )
-        return
-
+    # Server availability is NOT checked here: choosing a plan and paying must
+    # never depend on the pool. A server is assigned only when the VPN client
+    # is created (VPNService.create_client → assign_server_to_user). See
+    # 3xui-shop-41.
     callback_data.devices = 1
     callback_data.state = NavSubscription.DURATION
     await callback.message.edit_text(
