@@ -45,6 +45,9 @@ class Transaction(Base):
     retry_notified: Mapped[bool] = mapped_column(
         Boolean(), default=False, server_default=false(), nullable=False
     )
+    activation_applied: Mapped[bool] = mapped_column(
+        Boolean(), default=False, server_default=false(), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         default=func.now(),

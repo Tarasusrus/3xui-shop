@@ -50,6 +50,7 @@ class _FakeTxn:
         self.status = status
         self.subscription = "packed"
         self.retry_notified = False
+        self.activation_applied = False
 
 
 def _make_gateway(monkeypatch, i18n, *, create_ok, exists, is_extend=False, is_change=False):
@@ -207,6 +208,34 @@ async def test_missing_user_notifies_dev_once_across_retries(monkeypatch, i18n):
 
     assert txn.retry_notified is True
     assert services.notification.notify_developer.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_extend_not_double_applied_when_completed_write_fails(monkeypatch, i18n):
+    """Activation applied but COMPLETED-write fails → retry must NOT re-extend (3xui-shop-68)."""
+    gateway, txn, _um, services = _make_gateway(
+        monkeypatch, i18n, create_ok=True, exists=False, is_extend=True,
+    )
+
+    # The status=COMPLETED write fails on the first attempt, succeeds afterwards.
+    fail_first = {"pending": True}
+
+    async def _update(session, payment_id, **kwargs):
+        if kwargs.get("status") == TransactionStatus.COMPLETED and fail_first["pending"]:
+            fail_first["pending"] = False
+            raise RuntimeError("db locked")
+        for field, value in kwargs.items():
+            setattr(txn, field, value)
+
+    monkeypatch.setattr(gw.Transaction, "update", AsyncMock(side_effect=_update))
+
+    with pytest.raises(RuntimeError):
+        await gateway._on_payment_succeeded("cryptopay_8")  # extend applied, COMPLETED write fails
+    await gateway._on_payment_succeeded("cryptopay_8")       # retry: skip re-extend, COMPLETED ok
+
+    assert services.vpn.extend_subscription.await_count == 1
+    assert txn.activation_applied is True
+    assert txn.status == TransactionStatus.COMPLETED
 
 
 @pytest.mark.asyncio

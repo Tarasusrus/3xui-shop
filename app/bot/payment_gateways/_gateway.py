@@ -157,8 +157,21 @@ class PaymentGateway(ABC):
         # retries it — instead of leaving a paid-but-keyless COMPLETED record.
         # All exactly-once side effects (COMPLETED, referral rewards, success
         # notification) run only after confirmed activation. See 3xui-shop-64.
-        with self.i18n.use_locale(locale):
-            activated = await self._activate_subscription(user=user, data=data)
+        # `activation_applied` makes retries idempotent: once the VPN was
+        # provisioned on 3x-ui we persist the flag, so a later poll cycle (e.g.
+        # after a failed COMPLETED write) does NOT call extend/change again and
+        # double the days. Extend is additive on 3x-ui, so re-applying would
+        # stack duration. See 3xui-shop-68.
+        if transaction.activation_applied:
+            activated = True
+        else:
+            with self.i18n.use_locale(locale):
+                activated = await self._activate_subscription(user=user, data=data)
+            if activated:
+                async with self.session() as session:
+                    await Transaction.update(
+                        session=session, payment_id=payment_id, activation_applied=True
+                    )
 
         if not activated:
             logger.error(
