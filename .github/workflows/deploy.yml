@@ -50,9 +50,12 @@ jobs:
             SHOP_REFERRER_LEVEL_TWO_RATE=1
             SHOP_BONUS_DEVICES_COUNT=0
 
-            SHOP_PAYMENT_SBP_ENABLED=True
-            SHOP_SBP_PHONE=${{ secrets.SHOP_SBP_PHONE }}
-            SHOP_SBP_BANK=${{ secrets.SHOP_SBP_BANK }}
+            SHOP_PAYMENT_SBP_ENABLED=False
+
+            SHOP_PAYMENT_CRYPTOPAY_ENABLED=True
+            SHOP_CRYPTOPAY_TOKEN=${{ secrets.SHOP_CRYPTOPAY_TOKEN }}
+            SHOP_CRYPTOPAY_TESTNET=False
+            SHOP_CRYPTOPAY_POLL_INTERVAL_SEC=60
             ENVEOF
 
             docker compose build

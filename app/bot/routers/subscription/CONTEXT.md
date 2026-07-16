@@ -9,9 +9,20 @@
 
 Флоу:
 1. `callback_subscription` — показ текущей подписки + кнопки buy/extend/change
-2. `callback_devices_selected` — выбор кол-ва устройств
-3. `callback_duration_selected` — выбор длительности → показ `payment_method_keyboard`
-4. `payment_method_keyboard` получает `gateway_factory.get_gateways()` — все зарегистрированные гейтвеи включая manual
+2. `callback_subscription_process` (state=PROCESS) — вход «Купить подписку» → сразу форма выбора длительности
+3. `callback_devices_selected` — выбор кол-ва устройств
+4. `callback_duration_selected` — выбор длительности → показ `payment_method_keyboard`
+5. `payment_method_keyboard` получает `gateway_factory.get_gateways()` — все зарегистрированные гейтвеи включая manual
+
+**Инвариант (3xui-shop-41):** выбор тарифа и оплата НЕ зависят от наличия сервера.
+`callback_subscription_process` больше не вызывает `get_available_server()` — раньше
+он падал popup'ом «нет доступных серверов» и блокировал форму оплаты. Сервер нужен
+только при создании VPN-клиента (`VPNService.create_client → assign_server_to_user`,
+`vpn.py:147`), который сам возвращает False если пул пуст. Регресс покрыт
+`tests/test_subscription_process_no_server.py`.
+Кнопка «Активировать промокод» в `subscription_keyboard` заменена на «Пригласить друга»
+(`NavReferral.MAIN`); отдельной кнопки-входа в промокод из UI больше нет (handler жив
+для `F.data == NavSubscription.PROMOCODE`).
 
 ### payment_handler.py
 Обработка выбора метода оплаты.

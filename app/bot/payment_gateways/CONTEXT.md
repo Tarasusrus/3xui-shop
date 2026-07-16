@@ -16,7 +16,9 @@
 - `handle_payment_succeeded(payment_id)` / `handle_payment_canceled(payment_id)`
 
 Общая логика в базовом классе:
-- `_on_payment_succeeded` — обновляет Transaction(COMPLETED), выдаёт реф-награды, уведомляет dev, вызывает vpn.create/extend/change_subscription
+- `_on_payment_succeeded` — **сначала** активирует VPN (`_activate_subscription`), и **только при успехе** переводит Transaction→COMPLETED, выдаёт реф-награды, уведомляет dev + юзера. См. инвариант «activation-before-COMPLETED» ниже (3xui-shop-64).
+- `_activate_subscription(user, data) -> bool` — роутит на vpn.extend/change/create_subscription. Для create: `create_subscription` вернул True ИЛИ `is_client_exists(user)` → успех (различаем «уже создан» от «провал 3x-ui», сигнатуру vpn не меняем).
+- `_notify_activation_success(user, data)` — success-уведомление по ветке (purchase/extend/change), вызывается только после COMPLETED.
 - `_on_payment_canceled` — обновляет Transaction(CANCELED), уведомляет dev
 
 ## Фактический инвентарь гейтвеев (2026-07-14)
@@ -76,7 +78,7 @@ Cryptomus/Heleket/Yookassa/Yoomoney/TonManual — **фантомы** из апс
 ## Конфигурация (ShopConfig)
 
 ```
-SHOP_PAYMENT_SBP_ENABLED=true/false (default true)
+SHOP_PAYMENT_SBP_ENABLED=true/false (default FALSE с 3xui-shop-69 — прод на CryptoPay-only)
 SHOP_SBP_PHONE=+79001234567
 SHOP_SBP_BANK=Сбербанк
 
@@ -104,3 +106,7 @@ SHOP_CRYPTOPAY_POLL_INTERVAL_SEC=60 (min 10)
 - **`create_payment` fail-loud** — если `Transaction.create` вернул None (нет PENDING-строки → поллер не активирует), кидается `RuntimeError`; хендлер `callback_payment_method_selected` ловит и показывает `payment:popup:error` вместо битого URL.
 - **Expired TTL не блокирует confirm** — pending транзакция с истёкшим `expires_at` всё равно подтверждается. TTL сейчас только для cleanup-задачи, которая ещё не реализована.
 - **Race condition частично закрыт** — `_on_payment_succeeded` теперь проверяет `status == COMPLETED` и выходит. Но check-and-update не атомарный (нет `SELECT FOR UPDATE`). Для малого числа админов приемлемо.
+- **Идемпотентное продление на retry (3xui-shop-68)** — перед активацией проверяется `transaction.activation_applied`: если True (VPN уже выдан на прошлой попытке) — активация пропускается, сразу переход к COMPLETED. После успешной активации флаг персистится ДО COMPLETED-записи. Иначе окно «extend применён на 3x-ui, но COMPLETED-write упал» → поллер продлевал бы повторно (дни additive, устройства уже replace). `change` был идемпотентен и так (replace_duration=True). Durable-колонка `Transaction.activation_applied`, миграция `e4f5a6b7c8d9`. Регресс: `test_extend_not_double_applied_when_completed_write_fails`.
+- **Notify-once на retry (3xui-shop-67)** — обе failure-ветки (`user is None` и `not activated`) шлют уведомления только если `not transaction.retry_notified`, после отправки выставляют флаг через `_mark_retry_notified` (`Transaction.update(retry_notified=True)`). Иначе поллер (ре-poll PENDING каждые 60с) спамил бы юзера/dev каждый цикл. Флаг durable (колонка `Transaction.retry_notified`, миграция `d3e4f5a6b7c8`), не сбрасывается — при восстановлении 3x-ui успешный путь всё равно шлёт `notify_purchase_success`. Регресс: `test_*_notifies_*_once_across_retries`.
+- **Guard user=None (3xui-shop-66)** — `_on_payment_succeeded` при `User.get → None` (удалённый/рассинхронизированный аккаунт) НЕ дереференсит user: логирует, шлёт dev-алерт (plain text, без i18n), оставляет транзакцию PENDING и выходит. Иначе `user.tg_id` → AttributeError на каждом цикле поллера = вечный crash-loop. Регресс: `test_missing_user_does_not_crash_and_alerts_dev`.
+- **Инвариант activation-before-COMPLETED (3xui-shop-64)** — VPN активируется ДО перевода Transaction→COMPLETED. Если 3x-ui недоступен / пул пуст → активация вернёт False, транзакция остаётся PENDING → CryptoPay поллер (`get_pending_cryptopay`, 60с) ретраит, SBP — админ повторно жмёт confirm. Юзеру шлётся `payment:message:activation_pending`, dev — `payment:event:activation_failed`. **Все exactly-once побочки** (COMPLETED, реф-награды, success-notify) — строго за успехом активации, иначе на ретрае поллера они бы задвоились. «Клиент уже существует» = идемпотентный успех (не провал), иначе вечный retry-loop. Регресс: `tests/test_payment_activation_ordering.py`. Новые локаль-ключи требуют `pybabel compile -d app/locales -D bot` (.mo gitignored, COPY в Docker).

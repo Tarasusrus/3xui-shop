@@ -34,6 +34,8 @@ class PaymentType(Enum):
 **MUST** добавить через `batch_alter_table` (Alembic, SQLite):
 - `expires_at: Mapped[datetime | None]` — TTL для PENDING-оплат
 - `payment_type: Mapped[str | None]` — тип метода оплаты
+- `retry_notified: Mapped[bool]` (default False, `server_default=false()`, NOT NULL) — флаг «юзер/dev уже уведомлены о задержке активации». Гейтит failure-уведомления в `_on_payment_succeeded`, чтобы поллер (ре-poll PENDING каждые 60с) не спамил. Миграция `d3e4f5a6b7c8`. См. 3xui-shop-67.
+- `activation_applied: Mapped[bool]` (default False, `server_default=false()`, NOT NULL) — флаг «VPN уже выдан на 3x-ui». На ретрае (после провала COMPLETED-записи) пропускает повторную активацию, чтобы продление не начислило дни дважды. Миграция `e4f5a6b7c8d9`. См. 3xui-shop-68.
 
 **MUST** `subscription` оставить NOT NULL; для ручных оплат писать фиктивный JSON `'{"type":"manual"}'`.
 

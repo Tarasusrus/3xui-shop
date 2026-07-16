@@ -42,6 +42,12 @@ class Transaction(Base):
     )
     payment_type: Mapped[str | None] = mapped_column(String(length=32), nullable=True)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(), nullable=True)
+    retry_notified: Mapped[bool] = mapped_column(
+        Boolean(), default=False, server_default=false(), nullable=False
+    )
+    activation_applied: Mapped[bool] = mapped_column(
+        Boolean(), default=False, server_default=false(), nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         default=func.now(),
