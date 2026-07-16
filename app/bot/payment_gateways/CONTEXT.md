@@ -78,7 +78,7 @@ Cryptomus/Heleket/Yookassa/Yoomoney/TonManual — **фантомы** из апс
 ## Конфигурация (ShopConfig)
 
 ```
-SHOP_PAYMENT_SBP_ENABLED=true/false (default true)
+SHOP_PAYMENT_SBP_ENABLED=true/false (default FALSE с 3xui-shop-69 — прод на CryptoPay-only)
 SHOP_SBP_PHONE=+79001234567
 SHOP_SBP_BANK=Сбербанк
 
