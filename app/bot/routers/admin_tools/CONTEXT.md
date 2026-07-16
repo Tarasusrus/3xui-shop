@@ -29,6 +29,7 @@
 
 ### server_handler.py
 CRUD серверов: добавить, удалить, показать, синхронизировать.
+- `callback_confirmation` — перед `Server.create` вызывает `services.server_pool.probe_connection(host)` (реальный login в 3x-ui). Если проба провалилась (неверная схема / нет base-path `/xr4admin` — класс 3xui-shop-70) — сервер НЕ сохраняется, popup `host_unreachable`. `is_valid_host` синтаксический и такое не ловит. См. 3xui-shop-71.
 
 ### invites_handler.py
 Управление инвайт-ссылками. FSM: имя → создание.

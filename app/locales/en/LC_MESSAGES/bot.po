@@ -1424,3 +1424,8 @@ msgstr ""
 "⏳ <b>Payment received!</b>\n"
 "\n"
 "Key delivery is delayed due to a technical issue. We'll retry automatically — the key will arrive in this chat. If it doesn't within a few minutes, contact support."
+
+
+#: app/bot/routers/admin_tools/server_handler.py
+msgid "server_management:popup:host_unreachable"
+msgstr "❌ Could not log in to 3x-ui at this host. Check the scheme (https) and panel base-path (e.g. /xr4admin). Server not added."

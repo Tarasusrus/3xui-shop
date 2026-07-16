@@ -23,20 +23,37 @@ class ServerPoolService:
         self._servers: dict[int, Connection] = {}
         logger.info("Server Pool Service initialized.")
 
+    def _build_api(self, host: str, name: str) -> AsyncApi:
+        return AsyncApi(
+            host=host,
+            username=self.config.xui.USERNAME,
+            password=self.config.xui.PASSWORD,
+            token=self.config.xui.TOKEN,
+            # 3x-ui панель self-hosted на голом IP без валидного TLS-серта.
+            # py3xui 0.6.0 включил use_tls_verify=True по умолчанию → login
+            # падает (CERTIFICATE_VERIFY_FAILED) → пул пуст → VPN не выдаётся.
+            # См. 3xui-shop-70.
+            use_tls_verify=False,
+            logger=logging.getLogger(f"xui_{name}"),
+        )
+
+    async def probe_connection(self, host: str) -> bool:
+        """Проверяет, что по host реально логинится 3x-ui (схема + base-path).
+
+        Ловит класс 3xui-shop-70: голый `http://IP:port` без `/xr4admin` или
+        неверная схема → login падает (404 /csrf-token, SSL). Используется при
+        добавлении сервера, чтобы не сохранить недоступный host → пустой пул.
+        """
+        try:
+            await self._build_api(host=host, name="probe").login()
+            return True
+        except Exception as exception:
+            logger.warning(f"Server host probe failed for {host}: {exception}")
+            return False
+
     async def _add_server(self, server: Server) -> None:
         if server.id not in self._servers:
-            api = AsyncApi(
-                host=server.host,
-                username=self.config.xui.USERNAME,
-                password=self.config.xui.PASSWORD,
-                token=self.config.xui.TOKEN,
-                # 3x-ui панель self-hosted на голом IP без валидного TLS-серта.
-                # py3xui 0.6.0 включил use_tls_verify=True по умолчанию → login
-                # падает (CERTIFICATE_VERIFY_FAILED) → пул пуст → VPN не выдаётся.
-                # См. 3xui-shop-70.
-                use_tls_verify=False,
-                logger=logging.getLogger(f"xui_{server.name}"),
-            )
+            api = self._build_api(host=server.host, name=server.name)
             try:
                 await api.login()
                 server.online = True

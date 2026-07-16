@@ -218,13 +218,22 @@ async def callback_confirmation(
     logger.info(f"Dev {user.tg_id} confirmed adding server.")
     data = await state.get_data()
 
-    # ping = await ping_url(data.get(SERVER_HOST_KEY))
-    # online = True if ping else False
+    # Probe login before saving: a syntactically valid but wrong host (bare
+    # http://IP without the panel base-path, wrong scheme) passes is_valid_host
+    # yet leaves the pool empty and breaks VPN delivery. See 3xui-shop-71 / -70.
+    host = data.get(SERVER_HOST_KEY)
+    if not await services.server_pool.probe_connection(host):
+        logger.warning(f"Rejected server host {host}: 3x-ui login probe failed.")
+        await services.notification.show_popup(
+            callback=callback,
+            text=_("server_management:popup:host_unreachable"),
+        )
+        return
 
     server = await Server.create(
         session=session,
         name=data.get(SERVER_NAME_KEY),
-        host=data.get(SERVER_HOST_KEY),
+        host=host,
         max_clients=data.get(SERVER_MAX_CLIENTS_KEY),
         # online=online,
     )
