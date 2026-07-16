@@ -30,7 +30,11 @@ class ServerPoolService:
                 username=self.config.xui.USERNAME,
                 password=self.config.xui.PASSWORD,
                 token=self.config.xui.TOKEN,
-                # use_tls_verify=False,
+                # 3x-ui панель self-hosted на голом IP без валидного TLS-серта.
+                # py3xui 0.6.0 включил use_tls_verify=True по умолчанию → login
+                # падает (CERTIFICATE_VERIFY_FAILED) → пул пуст → VPN не выдаётся.
+                # См. 3xui-shop-70.
+                use_tls_verify=False,
                 logger=logging.getLogger(f"xui_{server.name}"),
             )
             try:
